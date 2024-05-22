@@ -1,0 +1,243 @@
+---
+title: |
+  \vspace{1cm}
+  \begin{tabular}{c}
+  {\normalsize\textbf{UNIVERSIDAD NACIONAL DE ROSARIO}}\\
+  {\Large Facultad de Ciencias Económicas y Estadística}\\
+  \\
+  \includegraphics[width=5cm]{LogoUNR.png}\\
+  \vspace{1cm}
+   \\
+  {\huge\textbf{Análisis de datos de duración}} \\
+  {\huge\textbf{en pacientes con cáncer de mama}}\\
+  \\
+  {\Large Rotterdam tumor bank - 1978-1985}\\
+  \end{tabular}
+  \vspace{5cm}
+author: |
+  *Alumnas:* Agustina Mac Kay y Rocio Canteros
+date: "Año 2024"
+output: pdf_document
+---
+
+## Introducción
+
+El cáncer de mama es un tipo de cáncer primario, que se origina en la mama y puede propagarse a otros tejidos u órganos del cuerpo. Es el tipo de cáncer más frecuente y la causa más común de muerte por cáncer en mujeres a nivel mundial.[^1]
+
+[^1]: Fuente: [\textcolor{blue}{\underline{Organización Panamericana de la Salud}}](https://www.paho.org/es/temas/cancer-mama)
+
+En este estudio se trabajará con información acerca de 583 mujeres que fueron sometidas, entre 1978 y 1985, a una cirugía primaria para extirpar el tumor.
+
+Los datos fueron obtenidos de la base *rotterdam* del paquete *survival* de R. La misma cuenta con el tiempo desde la cirugía hasta la muerte o pérdida de seguimiento de las pacientes, junto a otras covariables basales que se detallan a continuación:
+
+-   **Age**: edad al momento de la cirugía (en años).
+-   **Meno**: estado menopáusico, donde 0 = premenopáusico y 1 = postmenopáusico.
+-   **Hormon**: variable indicadora de haber recibido un tratamiento hormonal.
+-   **Chemo**: variable indicadora de haber recibido quimioterapia.
+-   **Pgr**: receptores de progesterona (en fmol/l).
+-   **Er**: receptores de estrógeno (en fmol/l).
+-   **Grade**: grado de diferenciación del tumor, con valores de 1 a 3.
+-   **Size**: tamaño del tumor, con niveles: menos de 20mm, entre 20 y 50mm, 50mm.
+
+De la totalidad de mujeres en estudio, se cuenta con el tiempo exacto hasta la muerte de 377 de ellas y 206 censuras.
+
+
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+library(tidyverse)
+library(gridExtra)
+library(survival)  # Para el ajuste del modelo de Cox 
+library(survminer) # Crear gráficos con la función ggsurvplot()
+library(lmtest) # Para calcular la significancia de los Beta 
+
+datos <- rotterdam %>%
+  filter(year <= 1985) %>%
+  select(-c(nodes, rtime, recur))
+```
+
+
+##Selección del modelo
+```{r}
+#Modelo sin covariables
+modelo_nulo <- coxph(Surv(dtime, death == 0) ~ 1, ties = "breslow", data = datos)
+loglik_nulo <- modelo_nulo$loglik
+
+#Modelos con una sola variable:
+#1) Edad:
+modelo_edad <- coxph(Surv(dtime, death == 0) ~ age, ties = "breslow", data = datos)
+
+loglik_edad <- modelo_edad$loglik[2]
+
+#Comparación del modelo con el modelo nulo
+lrtest(modelo_nulo, modelo_edad) #Edad es significativo
+
+
+
+#2) Menopausia
+modelo_meno <- coxph(Surv(dtime, death == 0) ~ meno, ties = "breslow", data = datos)
+
+loglik_meno <- modelo_meno$loglik[2]
+
+#Comparo con el modelo nulo:
+lrtest(modelo_nulo, modelo_meno) #Menopausia no es significativo
+
+
+#3) Terapia hormonal:
+modelo_hormon <- coxph(Surv(dtime, death == 0) ~ hormon, ties = "breslow", data = datos)
+
+#Comparo con el modelo nulo:
+lrtest(modelo_nulo, modelo_hormon) #No es significativo
+
+
+#4) Quimioterapía:
+modelo_chemo <- coxph(Surv(dtime, death == 0) ~ chemo, ties = "breslow", data = datos)
+
+
+#Comparo con el modelo nulo:
+lrtest(modelo_nulo, modelo_chemo) #No es significativo
+
+
+#5) Receptores de progesterona:
+modelo_pgr <- coxph(Surv(dtime, death == 0) ~ pgr, ties = "breslow", data = datos)
+
+
+
+#Comparo con el modelo nulo:
+lrtest(modelo_nulo, modelo_pgr)  #No significativo
+
+
+#6) Receptores de estrógeno:
+modelo_er <- coxph(Surv(dtime, death == 0) ~ er, ties = "breslow", data = datos)
+
+
+#Comparo con el modelo nulo:
+lrtest(modelo_nulo, modelo_er)  #Receptores no es significativo
+
+
+
+#7) Grado de diferenciación:
+modelo_grade <- coxph(Surv(dtime, death == 0) ~ grade, ties = "breslow", data = datos)
+
+
+#Compraro con el modelo nulo:
+lrtest(modelo_nulo, modelo_grade)  #No es significativo
+
+
+#8) Tamaño del tumor:
+modelo_size <- coxph(Surv(dtime, death == 0) ~ size, ties = "breslow", data = datos)
+
+
+#Comparación con el modelo nulo:
+lrtest(modelo_nulo, modelo_size) #No es significativo
+```
+
+```{r, eval=TRUE}
+datos_graf <- datos %>% 
+  mutate(pgr_cat = ifelse(pgr == 0, 0, 1),
+         er_cat = ifelse(er == 0, 0, 1))
+mod_alt <- coxph(Surv(dtime, death == 0) ~ er_cat, ties = "breslow", data = datos_graf)
+
+
+lrtest(modelo_nulo, mod_alt)
+
+```
+
+Como solo nos queda una variable en modelo, directamente probamos la conbinacion de ella con las variables no importantes
+
+```{r}
+mod_edad_meno <- coxph(Surv(dtime, death == 0) ~ age + meno, ties = "breslow", data = datos) 
+
+#Comparacion con el modelo de Edad:
+lrtest(modelo_edad, mod_edad_meno) #No ajusta
+
+
+mod_edad_hormon <- coxph(Surv(dtime, death == 0) ~ age + hormon, ties = "breslow", data = datos)
+
+#Comparacion con el modelo de Edad:
+lrtest(modelo_edad, mod_edad_hormon) #No ajusta
+
+
+mod_edad_chemo <- coxph(Surv(dtime, death == 0) ~ age + chemo, ties = "breslow", data = datos)
+
+#Comparacion con el modelo de Edad:
+lrtest(modelo_edad, mod_edad_chemo) #No ajusta
+
+mod_edad_pgr <- coxph(Surv(dtime, death == 0) ~ age + pgr, ties = "breslow", data = datos)
+
+#Comparacion con el modelo de Edad:
+lrtest(modelo_edad, mod_edad_pgr) #No ajusta
+
+
+mod_edad_er <- coxph(Surv(dtime, death == 0) ~ age + er, ties = "breslow", data = datos)
+
+#Comparacion con el modelo de Edad:
+lrtest(modelo_edad, mod_edad_er) #No ajusta
+
+
+mod_edad_grade <- coxph(Surv(dtime, death == 0) ~ age + grade, ties = "breslow", data = datos)
+
+#Comparacion con el modelo de Edad:
+lrtest(modelo_edad, mod_edad_grade) #No ajusta
+
+
+mod_edad_size <- coxph(Surv(dtime, death == 0) ~ age + size, ties = "breslow", data = datos)
+
+#Comparacion con el modelo de Edad:
+lrtest(modelo_edad, mod_edad_size) #No ajusta
+
+```
+
+##Linealidad
+```{r}
+datos1 <- datos %>% 
+  mutate(
+    age_d1 = ifelse(age >= 40 & age < 50, 1, 0),
+    age_d2 = ifelse(age >= 50 & age < 70, 1, 0),
+    age_d3 = ifelse(age >= 70, 1, 0)
+  ) %>% 
+  mutate(
+    age_factor = case_when(
+      age < 40 ~ 1,
+      age >= 40 & age < 50 ~ 2,
+      age >= 50 & age < 70 ~ 3,
+      age >= 70 ~ 4
+    )
+  )
+
+mod_edad_dummie <- coxph(Surv(dtime, death == 0) ~ age_d1 + age_d2 + age_d3, ties = "breslow", data = datos1)
+
+mod_edad_factor <- coxph(Surv(dtime, death == 0) ~ age_factor, ties = "breslow", data = datos1)
+
+
+lrtest(mod_edad_factor, mod_edad_dummie)
+```
+
+La probabilidad asociada en mayor al 5%, entonces la variable es lineal.
+
+Ahora probamos si receptores de progesterona y receptores de estrógeno son lineales con la variable Edad en el modelo.
+
+```{r}
+quantile(datos$pgr, probs = c(0.25, 0.5, 0.75))
+
+datos2 <- datos %>% 
+  mutate(
+    pgr_d1 = ifelse(pgr >= 4 & pgr < 39, 1, 0),
+    pgr_d2 = ifelse(pgr >= 39 & pgr < 187, 1, 0),
+    pgr_d3 = ifelse(pgr >= 187, 1, 0)
+  ) %>% 
+  mutate(
+    pgr_factor =case_when(
+      pgr < 4 ~ 1,
+      pgr >= 4 & pgr <  39 ~ 2,
+      pgr >= 39 & pgr <187 ~ 3,
+      pgr >= 187 ~ 4
+    )
+  )
+
+mod_eda_pgr <- coxph(Surv(dtime, death == 0) ~ age + pgr_d1 + pgr_d2 + pgr_d3, ties = "breslow", data = datos2)
+
+mod_edad_pgrf <- coxph(Surv(dtime, death == 0) ~ age + pgr_factor, ties = "breslow", data = datos2)
+
+
+lrtest(mod_edad_pgrf, mod_edad_pgr)
+```
+

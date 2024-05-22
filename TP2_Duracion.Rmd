@@ -41,11 +41,10 @@ Los datos fueron obtenidos de la base *rotterdam* del paquete *survival* de R. L
 
 De la totalidad de mujeres en estudio, se cuenta con el tiempo exacto hasta la muerte de 377 de ellas y 206 censuras.
 
-
 ```{r echo=FALSE, warning=FALSE, message=FALSE}
 library(tidyverse)
 library(gridExtra)
-library(survival)  # Para el ajuste del modelo de Cox 
+library(survival)  # Para el ajuste de modelos de Cox 
 library(survminer) # Crear gráficos con la función ggsurvplot()
 library(lmtest) # Para calcular la significancia de los Beta 
 
@@ -136,9 +135,7 @@ datos_graf <- datos %>%
          er_cat = ifelse(er == 0, 0, 1))
 mod_alt <- coxph(Surv(dtime, death == 0) ~ er_cat, ties = "breslow", data = datos_graf)
 
-
 lrtest(modelo_nulo, mod_alt)
-
 ```
 
 Como solo nos queda una variable en modelo, directamente probamos la conbinacion de ella con las variables no importantes
@@ -216,6 +213,7 @@ La probabilidad asociada en mayor al 5%, entonces la variable es lineal.
 Ahora probamos si receptores de progesterona y receptores de estrógeno son lineales con la variable Edad en el modelo.
 
 ```{r}
+# Receptores de progesterona
 quantile(datos$pgr, probs = c(0.25, 0.5, 0.75))
 
 datos2 <- datos %>% 
@@ -233,11 +231,46 @@ datos2 <- datos %>%
     )
   )
 
-mod_eda_pgr <- coxph(Surv(dtime, death == 0) ~ age + pgr_d1 + pgr_d2 + pgr_d3, ties = "breslow", data = datos2)
+mod_edad_pgrd <- coxph(Surv(dtime, death == 0) ~ age + pgr_d1 + pgr_d2 + pgr_d3, ties = "breslow", data = datos2)
 
 mod_edad_pgrf <- coxph(Surv(dtime, death == 0) ~ age + pgr_factor, ties = "breslow", data = datos2)
 
 
-lrtest(mod_edad_pgrf, mod_edad_pgr)
+lrtest(mod_edad_pgrf, mod_edad_pgrd) # Test significativo. No hay linealidad
+
+# Probamos el efecto de los receptores de progesterona incluidos al modelo 
+# con varaibles dummies.
+
+lrtest(modelo_edad, mod_edad_pgrd) # Test no significativo
+
+
+# Receptores de estrógeno
+quantile(datos$er, probs = c(0.25, 0.5, 0.75))
+
+datos2 <- datos %>% 
+  mutate(
+    er_d1 = ifelse(er >= 9 & er < 62, 1, 0),
+    er_d2 = ifelse(er >= 62 & er < 188, 1, 0),
+    er_d3 = ifelse(er >= 188, 1, 0)
+  ) %>% 
+  mutate(
+    er_factor =case_when(
+      er < 9 ~ 1,
+      er >= 9 & er < 62 ~ 2,
+      er >= 62 & er <188 ~ 3,
+      er >= 188 ~ 4
+    )
+  )
+
+mod_edad_erd <- coxph(Surv(dtime, death == 0) ~ age + er_d1 + er_d2 + er_d3, ties = "breslow", data = datos2)
+
+mod_edad_erf <- coxph(Surv(dtime, death == 0) ~ age + er_factor, ties = "breslow", data = datos2)
+
+
+lrtest(mod_edad_erf, mod_edad_erd) # Test significativo. No hay linealidad
+
+# Probamos el efecto de los receptores de estrógeno incluidos al modelo con # varaibles dummies.
+
+lrtest(modelo_edad, mod_edad_erd) # Test no significativo
 ```
 

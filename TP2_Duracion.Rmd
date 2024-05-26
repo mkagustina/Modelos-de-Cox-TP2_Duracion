@@ -41,7 +41,6 @@ Los datos fueron obtenidos de la base *rotterdam* del paquete *survival* de R. L
 
 De la totalidad de mujeres en estudio, se cuenta con el tiempo exacto hasta la muerte de 377 de ellas y 206 censuras.
 
-
 ```{r echo=FALSE, warning=FALSE, message=FALSE}
 library(tidyverse)
 library(gridExtra)
@@ -54,16 +53,16 @@ datos <- rotterdam %>%
   select(-c(nodes, rtime, recur))
 ```
 
-
 ##Selección del modelo
+
 ```{r}
 #Modelo sin covariables
-modelo_nulo <- coxph(Surv(dtime, death == 0) ~ 1, ties = "breslow", data = datos)
+modelo_nulo <- coxph(Surv(dtime, death) ~ 1, ties = "breslow", data = datos)
 loglik_nulo <- modelo_nulo$loglik
 
 #Modelos con una sola variable:
 #1) Edad:
-modelo_edad <- coxph(Surv(dtime, death == 0) ~ age, ties = "breslow", data = datos)
+modelo_edad <- coxph(Surv(dtime, death) ~ age, ties = "breslow", data = datos)
 
 loglik_edad <- modelo_edad$loglik[2]
 
@@ -73,23 +72,23 @@ lrtest(modelo_nulo, modelo_edad) #Edad es significativo
 
 
 #2) Menopausia
-modelo_meno <- coxph(Surv(dtime, death == 0) ~ meno, ties = "breslow", data = datos)
+modelo_meno <- coxph(Surv(dtime, death) ~ meno, ties = "breslow", data = datos)
 
 loglik_meno <- modelo_meno$loglik[2]
 
 #Comparo con el modelo nulo:
-lrtest(modelo_nulo, modelo_meno) #Menopausia no es significativo
+lrtest(modelo_nulo, modelo_meno) #Menopausia es significativo
 
 
 #3) Terapia hormonal:
-modelo_hormon <- coxph(Surv(dtime, death == 0) ~ hormon, ties = "breslow", data = datos)
+modelo_hormon <- coxph(Surv(dtime, death) ~ hormon, ties = "breslow", data = datos)
 
 #Comparo con el modelo nulo:
 lrtest(modelo_nulo, modelo_hormon) #No es significativo
 
 
 #4) Quimioterapía:
-modelo_chemo <- coxph(Surv(dtime, death == 0) ~ chemo, ties = "breslow", data = datos)
+modelo_chemo <- coxph(Surv(dtime, death) ~ chemo, ties = "breslow", data = datos)
 
 
 #Comparo con el modelo nulo:
@@ -97,7 +96,7 @@ lrtest(modelo_nulo, modelo_chemo) #No es significativo
 
 
 #5) Receptores de progesterona:
-modelo_pgr <- coxph(Surv(dtime, death == 0) ~ pgr, ties = "breslow", data = datos)
+modelo_pgr <- coxph(Surv(dtime, death) ~ pgr, ties = "breslow", data = datos)
 
 
 
@@ -106,88 +105,157 @@ lrtest(modelo_nulo, modelo_pgr)  #No significativo
 
 
 #6) Receptores de estrógeno:
-modelo_er <- coxph(Surv(dtime, death == 0) ~ er, ties = "breslow", data = datos)
+modelo_er <- coxph(Surv(dtime, death) ~ er, ties = "breslow", data = datos)
 
 
 #Comparo con el modelo nulo:
-lrtest(modelo_nulo, modelo_er)  #Receptores no es significativo
+lrtest(modelo_nulo, modelo_er)  #Receptores es significativo
 
 
 
 #7) Grado de diferenciación:
-modelo_grade <- coxph(Surv(dtime, death == 0) ~ grade, ties = "breslow", data = datos)
+modelo_grade <- coxph(Surv(dtime, death) ~ grade, ties = "breslow", data = datos)
 
 
 #Compraro con el modelo nulo:
-lrtest(modelo_nulo, modelo_grade)  #No es significativo
+lrtest(modelo_nulo, modelo_grade)  #Es significativo
 
 
 #8) Tamaño del tumor:
-modelo_size <- coxph(Surv(dtime, death == 0) ~ size, ties = "breslow", data = datos)
+modelo_size <- coxph(Surv(dtime, death) ~ size, ties = "breslow", data = datos)
 
 
 #Comparación con el modelo nulo:
-lrtest(modelo_nulo, modelo_size) #No es significativo
+lrtest(modelo_nulo, modelo_size) #Es significativo
 ```
 
 ```{r, eval=TRUE}
 datos_graf <- datos %>% 
-  mutate(pgr_cat = ifelse(pgr == 0, 0, 1),
-         er_cat = ifelse(er == 0, 0, 1))
-mod_alt <- coxph(Surv(dtime, death == 0) ~ er_cat, ties = "breslow", data = datos_graf)
+  mutate(pgr_cat = ifelse(pgr, 0, 1),
+         er_cat = ifelse(er, 0, 1))
+mod_alt <- coxph(Surv(dtime, death) ~ er_cat, ties = "breslow", data = datos_graf)
 
 
 lrtest(modelo_nulo, mod_alt)
 
 ```
 
-Como solo nos queda una variable en modelo, directamente probamos la conbinacion de ella con las variables no importantes
+Tras comparar los modelos simples o univariados con aquel sin covariables, se determinó que las variables más "importantes" son: Edad, Menopausía, Receptores de progesterona, Grado de diferenciación y Tamaño del tumor. Sin embargo, no sé conoce si todas en conjunto son significativas o solo algunas, por esto se planteará un modelo aditivon con ellas y se probará, cada una por separado, si afectdn el ajuste del modelo aditivo.
+
+Previo a esta comparación de modelos, se definen 2 *dummies* referentes a la variable *Tamaño* y otras 2 para la variable *Grado*:
+
+
+$$ \begin{array}{ccc|ccc}
+size & S_1 & S_2 & grade & G_1 & G_2 \\
+\hline
+< 20 & 0 & 0 & 1 & 0 & 0 \\
+20-50 & 1 & 0 & 2 & 1 & 0 \\
+> 50 & 0 & 1 & 3 & 0 & 1  \\
+
+\end{array} $$
+
+
+-   Modelo aditivo: $ h_i (t) = h_0 (t) . exp( \beta_1 . edad_i + \beta_2 . meno_i + \beta_3 . er_i + \beta_4 . G_{1i} + \beta_5 . G_{2i} + \beta_6 . S_{1i} + \beta_7 . S_{2i}) $
+
+-   Modelos de comparación:
+
+    1)  Sin la variable *Tamaño*: $ h_i (t) = h_0 (t) . exp( \beta_1 . edad_i + \beta_2 . meno_i + \beta_3 . er_i + \beta_4 . G_{1i} + \beta_5 . G_{2i})$
+    
+    2) Sin la variable *Grado*: $ h_i (t) = h_0 (t) . exp( \beta_1 . edad_i + \beta_2 . meno_i + \beta_3 . er_i + \beta_6 . S_{1i} + \beta_7 . S_{2i})$
+    
+    3) Sin la variable *Receptores de estrógeno*: $ h_i (t) = h_0 (t) . exp( \beta_1 . edad_i + \beta_2 . meno_i + \beta_4 . G_{1i} + \beta_5 . G_{2i} + \beta_6 . S_{1i} + \beta_7 . S_{2i}) $
+    
+    4) Sin la variable *Menopausía*: $ h_i (t) = h_0 (t) . exp( \beta_1 . edad_i + \beta_3 . er_i + \beta_4 . G_{1i} + \beta_5 . G_{2i} + \beta_6 . S_{1i} + \beta_7 . S_{2i}) $
+    
+    5) Sin la variable *Edad*: $ h_i (t) = h_0 (t) . exp( \beta_2 . meno_i + \beta_3 . er_i + \beta_4 . G_{1i} + \beta_5 . G_{2i} + \beta_6 . S_{1i} + \beta_7 . S_{2i}) $
+
+-  Hipótesis: $ H_0) \beta_j = 0$ vs. $H_1) \beta_j \neq\ 0$ con $ j = \overline{1:7}$
+   El subíndice de $\beta$ tomará el valor correspondiente según cuál variable es de interés probar su significancia.
+   
+   
+```{r}
+#Se define el modelo con las variables importantes:
+modelo_cc <- coxph(Surv(dtime, death) ~ age + meno + er + grade + size, ties = "breslow", data = datos)
+
+
+##Modelos combinando las variables:
+
+#1)Edad, Menopausía, Receptores de estrógeno y Grado:
+modelo_nsize <- coxph(Surv(dtime, death) ~ age + meno + er + grade, ties = "breslow", data = datos)
+
+lrtest(modelo_nsize, modelo_cc) #La variable tamaño es significativa con las demás en modelo
+
+#2)Edad, Menopausía, Receptores de estrógeno y Tamaño:
+modelo_ngrade <- coxph(Surv(dtime, death) ~ age + meno + er + size, ties = "breslow", data = datos)
+
+lrtest(modelo_ngrade, modelo_cc) #EL grado es significativo con las demás variables en el modelo
+
+
+#3) Edad, Menopausía, Grado y Tamaño:
+modelo_ner <- coxph(Surv(dtime, death) ~ age + meno + grade + size, ties = "breslow", data = datos)
+
+
+lrtest(modelo_ner, modelo_cc) #La variable receptores no es significativa con las deás variables en el modelo
+
+#4)Edad, Receptores de estrógeno, Grado y Tamaño:
+modelo_nmeno <- coxph(Surv(dtime, death) ~ age + er + grade + size, ties = "breslow", data = datos)
+
+lrtest(modelo_nmeno, modelo_cc) #Menopausía no es significativa con las demás variables en el modelo
+
+#5)Menopausía, Receptores de estrógeno, Grado y Tamaño:
+modelo_nage <- coxph(Surv(dtime, death) ~ meno + er + grade + size, ties = "breslow", data = datos)
+
+lrtest(modelo_nage, modelo_cc) #La edad es significativa con las demás variables en el modelo
+```
+
+Teniendo en cuenta que los resultados de las comparaciones de los modeloes fueron los siguientes:
+
+$$ \begin {array} {c|c|c}
+Modelo & p-asociada & Decisión \\
+\hline
+1 & ~ 0 & \text{Rechazo H}_0 \\
+2 & 0.006 & \text{Rechazo H}_0 \\
+3 & 0.128 & \text{No rechazo H}_0 \\
+4 & 0.558 & \text{No rechazo H}_0 \\
+5 & 0.023 & \text{Rechazo H}_0 \\
+\end {array} $$
+
+El modelo que se obtendría sería $ h_i (t) = h_0 (t) . exp( \beta_1 . edad_i + \beta_2 . G_{1i} + \beta_3 . G_{2i} + \beta_4 . S_{1i} + \beta_5 . S_{2i} ) $. Sin embargo, este no es el modelo final dado que falta evaluar si, ahora con otras variables en el modelo, aquellas que no resultaron significativas de manera singular (NOTA PARA AGUS: sé que guille usó una palabra para ese tipo de ajustes pero no puedo recordar cuál es; lo hizo en el ejercicio de seleccion de variables cuando hay una de interés principal -tratamiento-).
+
 
 ```{r}
-mod_edad_meno <- coxph(Surv(dtime, death == 0) ~ age + meno, ties = "breslow", data = datos) 
+#Modelo con las variables significativas en conjunto
+modelo_cc_2 <- coxph(Surv(dtime, death) ~ age + grade + size, ties = "breslow", data = datos)
 
-#Comparacion con el modelo de Edad:
-lrtest(modelo_edad, mod_edad_meno) #No ajusta
+##Modelos con las variables no importantes:
 
+ #1)Se incluye "Terapía hormonal"
+ modelo_chormon <- coxph(Surv(dtime, death) ~ age + grade + size + hormon, ties = "breslow", data = datos)
+ 
+ lrtest(modelo_cc_2, modelo_chormon) #La variable "Terapái hormonal" sigue siendo no significativa
+ 
+ #2) Se inlcuye "Quimioterapía":
+ modelo_cchemo <- coxph(Surv(dtime, death) ~ age + grade + size + chemo,
+                        ties = "breslow", data = datos)
+ 
+ lrtest(modelo_cc_2, modelo_cchemo) #Con las demás, "Quimioterapía" es significativa
+ 
+ 
+ #3)Se incluye "Receptores de progesterona":
+ modelo_cpgr <- coxph(Surv(dtime, death) ~ age + grade + size + pgr, 
+                      ties = "breslow", data = datos)
+ 
+ lrtest(modelo_cc_2, modelo_cpgr) #No es significativa
 
-mod_edad_hormon <- coxph(Surv(dtime, death == 0) ~ age + hormon, ties = "breslow", data = datos)
-
-#Comparacion con el modelo de Edad:
-lrtest(modelo_edad, mod_edad_hormon) #No ajusta
-
-
-mod_edad_chemo <- coxph(Surv(dtime, death == 0) ~ age + chemo, ties = "breslow", data = datos)
-
-#Comparacion con el modelo de Edad:
-lrtest(modelo_edad, mod_edad_chemo) #No ajusta
-
-mod_edad_pgr <- coxph(Surv(dtime, death == 0) ~ age + pgr, ties = "breslow", data = datos)
-
-#Comparacion con el modelo de Edad:
-lrtest(modelo_edad, mod_edad_pgr) #No ajusta
-
-
-mod_edad_er <- coxph(Surv(dtime, death == 0) ~ age + er, ties = "breslow", data = datos)
-
-#Comparacion con el modelo de Edad:
-lrtest(modelo_edad, mod_edad_er) #No ajusta
-
-
-mod_edad_grade <- coxph(Surv(dtime, death == 0) ~ age + grade, ties = "breslow", data = datos)
-
-#Comparacion con el modelo de Edad:
-lrtest(modelo_edad, mod_edad_grade) #No ajusta
-
-
-mod_edad_size <- coxph(Surv(dtime, death == 0) ~ age + size, ties = "breslow", data = datos)
-
-#Comparacion con el modelo de Edad:
-lrtest(modelo_edad, mod_edad_size) #No ajusta
 
 ```
 
+
 ##Linealidad
-```{r}
+
+Cuando se tienen variables de tipo continua debe analizarse en que forma se las incluye en modelo y hay dos opciones de inclusión (?): lineal y no lineal; esta última contempla tanto la idea de categorizar la variable como la de una función de ella (logaritmo, al cuadrado, etc).
+
+```{r, eval = FALSE}
 datos1 <- datos %>% 
   mutate(
     age_d1 = ifelse(age >= 40 & age < 50, 1, 0),
@@ -203,9 +271,9 @@ datos1 <- datos %>%
     )
   )
 
-mod_edad_dummie <- coxph(Surv(dtime, death == 0) ~ age_d1 + age_d2 + age_d3, ties = "breslow", data = datos1)
+mod_edad_dummie <- coxph(Surv(dtime, death) ~ age_d1 + age_d2 + age_d3, ties = "breslow", data = datos1)
 
-mod_edad_factor <- coxph(Surv(dtime, death == 0) ~ age_factor, ties = "breslow", data = datos1)
+mod_edad_factor <- coxph(Surv(dtime, death) ~ age_factor, ties = "breslow", data = datos1)
 
 
 lrtest(mod_edad_factor, mod_edad_dummie)
@@ -215,7 +283,7 @@ La probabilidad asociada en mayor al 5%, entonces la variable es lineal.
 
 Ahora probamos si receptores de progesterona y receptores de estrógeno son lineales con la variable Edad en el modelo.
 
-```{r}
+```{r, eval=FALSE}
 quantile(datos$pgr, probs = c(0.25, 0.5, 0.75))
 
 datos2 <- datos %>% 
@@ -233,11 +301,10 @@ datos2 <- datos %>%
     )
   )
 
-mod_eda_pgr <- coxph(Surv(dtime, death == 0) ~ age + pgr_d1 + pgr_d2 + pgr_d3, ties = "breslow", data = datos2)
+mod_eda_pgr <- coxph(Surv(dtime, death) ~ age + pgr_d1 + pgr_d2 + pgr_d3, ties = "breslow", data = datos2)
 
-mod_edad_pgrf <- coxph(Surv(dtime, death == 0) ~ age + pgr_factor, ties = "breslow", data = datos2)
+mod_edad_pgrf <- coxph(Surv(dtime, death) ~ age + pgr_factor, ties = "breslow", data = datos2)
 
 
 lrtest(mod_edad_pgrf, mod_edad_pgr)
 ```
-

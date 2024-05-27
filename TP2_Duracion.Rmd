@@ -367,6 +367,5 @@ modelo3_er_dummie <- coxph(Surv(dtime, death) ~ age + chemo + er_d1 + er_d2
 modelo3_er_factor <- coxph(Surv(dtime, death) ~ age + chemo + er_factor +
                              grade + size, ties = "breslow", data = datos4)
 
-
 lrtest(modelo3_er_factor, modelo3_er_dummie) # Test no significativo.
 ```

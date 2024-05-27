@@ -70,7 +70,6 @@ loglik_edad <- modelo_edad$loglik[2]
 lrtest(modelo_nulo, modelo_edad) #Edad es significativo
 
 
-
 #2) Menopausia
 modelo_meno <- coxph(Surv(dtime, death) ~ meno, ties = "breslow", data = datos)
 
@@ -97,7 +96,6 @@ lrtest(modelo_nulo, modelo_chemo) #No es significativo
 
 #5) Receptores de progesterona:
 modelo_pgr <- coxph(Surv(dtime, death) ~ pgr, ties = "breslow", data = datos)
-
 
 
 #Comparo con el modelo nulo:
@@ -127,21 +125,26 @@ modelo_size <- coxph(Surv(dtime, death) ~ size, ties = "breslow", data = datos)
 
 #Comparación con el modelo nulo:
 lrtest(modelo_nulo, modelo_size) #Es significativo
+
+# En resumen, resultaron significativos: edad, menopausia, receptores de estrógeno, grado de diferenciación y tamaño del tumor.
 ```
 
 ```{r, eval=TRUE}
-datos_graf <- datos %>% 
+datos1 <- datos %>% 
   mutate(pgr_cat = ifelse(pgr, 0, 1),
          er_cat = ifelse(er, 0, 1))
-mod_alt <- coxph(Surv(dtime, death) ~ er_cat, ties = "breslow", data = datos_graf)
+mod_alt1 <- coxph(Surv(dtime, death) ~ pgr_cat, ties = "breslow", data = datos1)
 
-lrtest(modelo_nulo, mod_alt)
+mod_alt2 <- coxph(Surv(dtime, death) ~ er_cat, ties = "breslow", data = datos1)
+
+lrtest(modelo_nulo, mod_alt1)
+lrtest(modelo_nulo, mod_alt2)
+# Ninguno da significativo. Yo (Agus) borraría esto
 ```
 
-Tras comparar los modelos simples o univariados con aquel sin covariables, se determinó que las variables más "importantes" son: Edad, Menopausía, Receptores de progesterona, Grado de diferenciación y Tamaño del tumor. Sin embargo, no sé conoce si todas en conjunto son significativas o solo algunas, por esto se planteará un modelo aditivon con ellas y se probará, cada una por separado, si afectdn el ajuste del modelo aditivo.
+Tras comparar los modelos simples o univariados con aquel sin covariables, se determinó que las variables más "importantes" son: Edad, Menopausia, Receptores de progesterona, Grado de diferenciación y Tamaño del tumor. Sin embargo, no se conoce si todas en conjunto son significativas o solo algunas, por esto se planteará un modelo aditivo con ellas y se probará, cada una por separado, si afectan el ajuste del modelo aditivo.
 
 Previo a esta comparación de modelos, se definen 2 *dummies* referentes a la variable *Tamaño* y otras 2 para la variable *Grado*:
-
 
 \[
 \begin{array}{ccc|ccc}
@@ -162,81 +165,77 @@ $$
 
 -   Modelos de comparación:
 
-1) Sin la variable *Tamaño*: 
+1) Sin la variable *Edad*: 
 
-$h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{edad}_i + \beta_2 \cdot \text{meno}_i + \beta_3 \cdot \text{er}_i + \beta_4 \cdot G_{1i} + \beta_5 \cdot G_{2i})$
+$h_i(t) = h_0(t) \cdot \exp(\beta_2 \cdot \text{meno}_i + \beta_3 \cdot \text{er}_i + \beta_4 \cdot G_{1i} + \beta_5 \cdot G_{2i} + \beta_6 \cdot S_{1i} + \beta_7 \cdot S_{2i})$
 
-2) Sin la variable *Grado*: 
+2) Sin la variable *Menopausia*: 
 
-$h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{edad}_i + \beta_2 \cdot \text{meno}_i + \beta_3 \cdot \text{er}_i + \beta_6 \cdot S_{1i} + \beta_7 \cdot S_{2i})$
+$h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{edad}_i + \beta_3 \cdot \text{er}_i + \beta_4 \cdot G_{1i} + \beta_5 \cdot G_{2i} + \beta_6 \cdot S_{1i} + \beta_7 \cdot S_{2i})$
 
 3) Sin la variable *Receptores de estrógeno*: 
 
 $h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{edad}_i + \beta_2 \cdot \text{meno}_i + \beta_4 \cdot G_{1i} + \beta_5 \cdot G_{2i} + \beta_6 \cdot S_{1i} + \beta_7 \cdot S_{2i})$
 
-4) Sin la variable *Menopausia*: 
+4) Sin la variable *Grado de diferenciación del tumor*: 
 
-$h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{edad}_i + \beta_3 \cdot \text{er}_i + \beta_4 \cdot G_{1i} + \beta_5 \cdot G_{2i} + \beta_6 \cdot S_{1i} + \beta_7 \cdot S_{2i})$
+$h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{edad}_i + \beta_2 \cdot \text{meno}_i + \beta_3 \cdot \text{er}_i + \beta_6 \cdot S_{1i} + \beta_7 \cdot S_{2i})$
 
-5) Sin la variable *Edad*: 
+5) Sin la variable *Tamaño del tumor*: 
 
-$h_i(t) = h_0(t) \cdot \exp(\beta_2 \cdot \text{meno}_i + \beta_3 \cdot \text{er}_i + \beta_4 \cdot G_{1i} + \beta_5 \cdot G_{2i} + \beta_6 \cdot S_{1i} + \beta_7 \cdot S_{2i})$
+$h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{edad}_i + \beta_2 \cdot \text{meno}_i + \beta_3 \cdot \text{er}_i + \beta_4 \cdot G_{1i} + \beta_5 \cdot G_{2i})$
 
 
 Hipótesis: $H_0: \beta_j = 0$ vs. $H_1: \beta_j \neq 0$ con $j = \overline{1:7}$
 
    El subíndice de $\beta$ tomará el valor correspondiente según cuál variable es de interés probar su significancia.
    
-   
 ```{r}
 #Se define el modelo con las variables importantes:
-modelo_cc <- coxph(Surv(dtime, death) ~ age + meno + er + grade + size, ties = "breslow", data = datos)
+modelo1 <- coxph(Surv(dtime, death) ~ age + meno + er + grade + size, ties = "breslow", data = datos)
 
+# Para cada variable importante, comparamos el modelo 1 contra un modelo que no contenga la variable de interés y así evaluamos su significancia
 
-##Modelos combinando las variables:
+#1) Variable Edad
+modelo_sin_age <- coxph(Surv(dtime, death) ~ meno + er + grade + size, ties = "breslow", data = datos)
 
-#1)Edad, Menopausía, Receptores de estrógeno y Grado:
-modelo_nsize <- coxph(Surv(dtime, death) ~ age + meno + er + grade, ties = "breslow", data = datos)
+lrtest(modelo_sin_age, modelo1) # Test significativo
 
-lrtest(modelo_nsize, modelo_cc) #La variable tamaño es significativa con las demás en modelo
+#2) Variable Menopausia
+modelo_sin_meno <- coxph(Surv(dtime, death) ~ age + er + grade + size, ties = "breslow", data = datos)
 
-#2)Edad, Menopausía, Receptores de estrógeno y Tamaño:
-modelo_ngrade <- coxph(Surv(dtime, death) ~ age + meno + er + size, ties = "breslow", data = datos)
+lrtest(modelo_sin_meno, modelo1) # Test no significativo
 
-lrtest(modelo_ngrade, modelo_cc) #EL grado es significativo con las demás variables en el modelo
+#3) Variable Receptores de estrógeno
+modelo_sin_er <- coxph(Surv(dtime, death) ~ age + meno + grade + size, ties = "breslow", data = datos)
 
+lrtest(modelo_sin_er, modelo1) # Test no significativo
 
-#3) Edad, Menopausía, Grado y Tamaño:
-modelo_ner <- coxph(Surv(dtime, death) ~ age + meno + grade + size, ties = "breslow", data = datos)
+#4) Variable Grade
+modelo_sin_grade <- coxph(Surv(dtime, death) ~ age + meno + er + size, ties = "breslow", data = datos)
 
+lrtest(modelo_sin_grade, modelo1) # Test significativo
 
-lrtest(modelo_ner, modelo_cc) #La variable receptores no es significativa con las deás variables en el modelo
+#5) Variable Size
+modelo_sin_size <- coxph(Surv(dtime, death) ~ age + meno + er + grade, ties = "breslow", data = datos)
 
-#4)Edad, Receptores de estrógeno, Grado y Tamaño:
-modelo_nmeno <- coxph(Surv(dtime, death) ~ age + er + grade + size, ties = "breslow", data = datos)
+lrtest(modelo_sin_size, modelo1) # Test significativo
 
-lrtest(modelo_nmeno, modelo_cc) #Menopausía no es significativa con las demás variables en el modelo
-
-#5)Menopausía, Receptores de estrógeno, Grado y Tamaño:
-modelo_nage <- coxph(Surv(dtime, death) ~ meno + er + grade + size, ties = "breslow", data = datos)
-
-lrtest(modelo_nage, modelo_cc) #La edad es significativa con las demás variables en el modelo
+# En resumen, las variables que resultaron significativas en un modelo que contiene la edad, menopausia, receptores de estrógeno, grado y tamaño del tumor son: edad, grado y tamaño del tumor.
 ```
-
 Teniendo en cuenta que los resultados de las comparaciones de los modeloes fueron los siguientes:
 
 $$ \begin {array} {c|c|c}
-Modelo & p-asociada & Decisión \\
+Modelo & \textit{p-value asociado} & Decisión \\
 \hline
-1 & ~ 0 & \text{Rechazo H}_0 \\
-2 & 0.006 & \text{Rechazo H}_0 \\
+1 & 0.023 & \text{Rechazo H}_0 \\
+2 & 0.559 & \text{Rechazo H}_0 \\
 3 & 0.128 & \text{No rechazo H}_0 \\
-4 & 0.558 & \text{No rechazo H}_0 \\
-5 & 0.023 & \text{Rechazo H}_0 \\
+4 & 0.006 & \text{No rechazo H}_0 \\
+5 & \text{~ 0} & \text{Rechazo H}_0 \\
 \end {array} $$
 
 El modelo que se obtendría sería $h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{edad}_i + \beta_2 \cdot G_{1i} + \beta_3 \cdot G_{2i} + \beta_4 \cdot S_{1i} + \beta_5 \cdot S_{2i})$. Sin embargo, este no es el modelo final dado que falta evaluar si, ahora con otras variables en el modelo, aquellas que no resultaron significativas de manera singular (NOTA PARA AGUS: sé que guille usó una palabra para ese tipo de ajustes pero no puedo recordar cuál es; lo hizo en el ejercicio de seleccion de variables cuando hay una de interés principal -tratamiento-).
-
 
 ```{r}
 #Modelo con las variables significativas en conjunto

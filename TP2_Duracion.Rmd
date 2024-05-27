@@ -55,93 +55,87 @@ datos <- rotterdam %>%
 
 ##Selección del modelo
 
-```{r}
+```{r, echo=FALSE}
 #Modelo sin covariables
 modelo_nulo <- coxph(Surv(dtime, death) ~ 1, ties = "breslow", data = datos)
 loglik_nulo <- modelo_nulo$loglik
 
 #Modelos con una sola variable:
-#1) Edad:
-modelo_edad <- coxph(Surv(dtime, death) ~ age, ties = "breslow", data = datos)
+# 1) Edad:
+modelo_edad <- coxph(Surv(dtime, death) ~ age, ties = "breslow",
+                     data = datos)
 
 loglik_edad <- modelo_edad$loglik[2]
 
 #Comparación del modelo con el modelo nulo
-lrtest(modelo_nulo, modelo_edad) #Edad es significativo
+
+lrtest(modelo_nulo, modelo_edad) # Test significativo
 
 
-#2) Menopausia
-modelo_meno <- coxph(Surv(dtime, death) ~ meno, ties = "breslow", data = datos)
+# 2) Menopausia
+modelo_meno <- coxph(Surv(dtime, death) ~ meno, ties = "breslow",
+                     data = datos)
 
 loglik_meno <- modelo_meno$loglik[2]
 
 #Comparo con el modelo nulo:
-lrtest(modelo_nulo, modelo_meno) #Menopausia es significativo
+lrtest(modelo_nulo, modelo_meno) # Test significativo
 
 
-#3) Terapia hormonal:
-modelo_hormon <- coxph(Surv(dtime, death) ~ hormon, ties = "breslow", data = datos)
+# 3) Terapia hormonal:
+modelo_hormon <- coxph(Surv(dtime, death) ~ hormon, ties = "breslow",
+                       data = datos)
 
 #Comparo con el modelo nulo:
-lrtest(modelo_nulo, modelo_hormon) #No es significativo
+lrtest(modelo_nulo, modelo_hormon) # Test no significativo
 
 
-#4) Quimioterapía:
+# 4) Quimioterapia:
 modelo_chemo <- coxph(Surv(dtime, death) ~ chemo, ties = "breslow", data = datos)
 
 
 #Comparo con el modelo nulo:
-lrtest(modelo_nulo, modelo_chemo) #No es significativo
+lrtest(modelo_nulo, modelo_chemo) # Test no significativo
 
 
-#5) Receptores de progesterona:
-modelo_pgr <- coxph(Surv(dtime, death) ~ pgr, ties = "breslow", data = datos)
+# 5) Receptores de progesterona:
+modelo_pgr <- coxph(Surv(dtime, death) ~ pgr, ties = "breslow",
+                    data = datos)
+
+
+# Comparo con el modelo nulo:
+lrtest(modelo_nulo, modelo_pgr)  # Test no significativo
+
+
+# 6) Receptores de estrógeno:
+modelo_er <- coxph(Surv(dtime, death) ~ er, ties = "breslow",
+                   data = datos)
 
 
 #Comparo con el modelo nulo:
-lrtest(modelo_nulo, modelo_pgr)  #No significativo
-
-
-#6) Receptores de estrógeno:
-modelo_er <- coxph(Surv(dtime, death) ~ er, ties = "breslow", data = datos)
-
-
-#Comparo con el modelo nulo:
-lrtest(modelo_nulo, modelo_er)  #Receptores es significativo
+lrtest(modelo_nulo, modelo_er)  # Test significativo
 
 
 
-#7) Grado de diferenciación:
-modelo_grade <- coxph(Surv(dtime, death) ~ grade, ties = "breslow", data = datos)
+# 7) Grado de diferenciación:
+modelo_grade <- coxph(Surv(dtime, death) ~ grade, ties = "breslow",
+                      data = datos)
 
 
-#Compraro con el modelo nulo:
-lrtest(modelo_nulo, modelo_grade)  #Es significativo
+# Compraro con el modelo nulo:
+lrtest(modelo_nulo, modelo_grade)  #Test significativo
 
 
-#8) Tamaño del tumor:
-modelo_size <- coxph(Surv(dtime, death) ~ size, ties = "breslow", data = datos)
+# 8) Tamaño del tumor:
+modelo_size <- coxph(Surv(dtime, death) ~ size, ties = "breslow",
+                     data = datos)
 
 
 #Comparación con el modelo nulo:
-lrtest(modelo_nulo, modelo_size) #Es significativo
+lrtest(modelo_nulo, modelo_size) #Test significativo
 
 # En resumen, resultaron significativos: edad, menopausia, receptores de estrógeno, grado de diferenciación y tamaño del tumor.
 ```
-
-```{r, eval=TRUE}
-datos1 <- datos %>% 
-  mutate(pgr_cat = ifelse(pgr, 0, 1),
-         er_cat = ifelse(er, 0, 1))
-mod_alt1 <- coxph(Surv(dtime, death) ~ pgr_cat, ties = "breslow", data = datos1)
-
-mod_alt2 <- coxph(Surv(dtime, death) ~ er_cat, ties = "breslow", data = datos1)
-
-lrtest(modelo_nulo, mod_alt1)
-lrtest(modelo_nulo, mod_alt2)
-# Ninguno da significativo. Yo (Agus) borraría esto
-```
-
 Tras comparar los modelos simples o univariados con aquel sin covariables, se determinó que las variables más "importantes" son: Edad, Menopausia, Receptores de progesterona, Grado de diferenciación y Tamaño del tumor. Sin embargo, no se conoce si todas en conjunto son significativas o solo algunas, por esto se planteará un modelo aditivo con ellas y se probará, cada una por separado, si afectan el ajuste del modelo aditivo.
 
 Previo a esta comparación de modelos, se definen 2 *dummies* referentes a la variable *Tamaño* y otras 2 para la variable *Grado*:
@@ -192,32 +186,38 @@ Hipótesis: $H_0: \beta_j = 0$ vs. $H_1: \beta_j \neq 0$ con $j = \overline{1:7}
    
 ```{r}
 #Se define el modelo con las variables importantes:
-modelo1 <- coxph(Surv(dtime, death) ~ age + meno + er + grade + size, ties = "breslow", data = datos)
+modelo1 <- coxph(Surv(dtime, death) ~ age + meno + er + grade + size,
+                 ties = "breslow", data = datos)
 
 # Para cada variable importante, comparamos el modelo 1 contra un modelo que no contenga la variable de interés y así evaluamos su significancia
 
-#1) Variable Edad
-modelo_sin_age <- coxph(Surv(dtime, death) ~ meno + er + grade + size, ties = "breslow", data = datos)
+# 1) Variable Edad
+modelo_sin_age <- coxph(Surv(dtime, death) ~ meno + er + grade + size,
+                        ties = "breslow", data = datos)
 
 lrtest(modelo_sin_age, modelo1) # Test significativo
 
-#2) Variable Menopausia
-modelo_sin_meno <- coxph(Surv(dtime, death) ~ age + er + grade + size, ties = "breslow", data = datos)
+# 2) Variable Menopausia
+modelo_sin_meno <- coxph(Surv(dtime, death) ~ age + er + grade + size,
+                         ties = "breslow", data = datos)
 
 lrtest(modelo_sin_meno, modelo1) # Test no significativo
 
-#3) Variable Receptores de estrógeno
-modelo_sin_er <- coxph(Surv(dtime, death) ~ age + meno + grade + size, ties = "breslow", data = datos)
+# 3) Variable Receptores de estrógeno
+modelo_sin_er <- coxph(Surv(dtime, death) ~ age + meno + grade + size,
+                       ties = "breslow", data = datos)
 
 lrtest(modelo_sin_er, modelo1) # Test no significativo
 
-#4) Variable Grade
-modelo_sin_grade <- coxph(Surv(dtime, death) ~ age + meno + er + size, ties = "breslow", data = datos)
+# 4) Variable Grade
+modelo_sin_grade <- coxph(Surv(dtime, death) ~ age + meno + er + size,
+                          ties = "breslow", data = datos)
 
 lrtest(modelo_sin_grade, modelo1) # Test significativo
 
-#5) Variable Size
-modelo_sin_size <- coxph(Surv(dtime, death) ~ age + meno + er + grade, ties = "breslow", data = datos)
+# 5) Variable Size
+modelo_sin_size <- coxph(Surv(dtime, death) ~ age + meno + er + grade,
+                         ties = "breslow", data = datos)
 
 lrtest(modelo_sin_size, modelo1) # Test significativo
 
@@ -235,42 +235,47 @@ Modelo & \textit{p-value asociado} & Decisión \\
 5 & \text{~ 0} & \text{Rechazo H}_0 \\
 \end {array} $$
 
-El modelo que se obtendría sería $h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{edad}_i + \beta_2 \cdot G_{1i} + \beta_3 \cdot G_{2i} + \beta_4 \cdot S_{1i} + \beta_5 \cdot S_{2i})$. Sin embargo, este no es el modelo final dado que falta evaluar si, ahora con otras variables en el modelo, aquellas que no resultaron significativas de manera singular (NOTA PARA AGUS: sé que guille usó una palabra para ese tipo de ajustes pero no puedo recordar cuál es; lo hizo en el ejercicio de seleccion de variables cuando hay una de interés principal -tratamiento-).
+El modelo que se obtendría sería $h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{edad}_i + \beta_2 \cdot G_{1i} + \beta_3 \cdot G_{2i} + \beta_4 \cdot S_{1i} + \beta_5 \cdot S_{2i})$. Sin embargo, este no es el modelo final dado que falta evaluar si, ahora con otras variables en el modelo, aquellas que no resultaron significativas de manera univariada (Nota para RO: no sé si esa es la palabra, no lo tengo anotado :( )
 
 ```{r}
-#Modelo con las variables significativas en conjunto
-modelo_cc_2 <- coxph(Surv(dtime, death) ~ age + grade + size, ties = "breslow", data = datos)
+# Modelo con las variables significativas hasta el momento
+modelo2 <- coxph(Surv(dtime, death) ~ age + grade + size, ties = "breslow",
+                 data = datos)
 
-##Modelos con las variables no importantes:
+# Para evaluar la significancia de las covariables que descartamos en la primer etapa de la selección,comparamos el modelo 2 contra un modelo que contenga sus mismas variables más cada una de las covariables.
 
- #1)Se incluye "Terapía hormonal"
- modelo_chormon <- coxph(Surv(dtime, death) ~ age + grade + size + hormon, ties = "breslow", data = datos)
+# 1) Variable "Tratamiento hormonal"
+modelo2_con_hormon <- coxph(Surv(dtime, death) ~ age + grade + size +
+                              hormon, ties = "breslow", data = datos)
  
- lrtest(modelo_cc_2, modelo_chormon) #La variable "Terapái hormonal" sigue siendo no significativa
+ lrtest(modelo2, modelo2_con_hormon) # Test no significativo
  
- #2) Se inlcuye "Quimioterapía":
- modelo_cchemo <- coxph(Surv(dtime, death) ~ age + grade + size + chemo,
-                        ties = "breslow", data = datos)
+# 2) Variable Quimioterapia
+modelo2_con_chemo <- coxph(Surv(dtime, death) ~ age + grade + size + chemo,
+                           ties = "breslow", data = datos)
  
- lrtest(modelo_cc_2, modelo_cchemo) #Con las demás, "Quimioterapía" es significativa
- 
- 
- #3)Se incluye "Receptores de progesterona":
- modelo_cpgr <- coxph(Surv(dtime, death) ~ age + grade + size + pgr, 
-                      ties = "breslow", data = datos)
- 
- lrtest(modelo_cc_2, modelo_cpgr) #No es significativa
+lrtest(modelo2, modelo2_con_chemo) # Test significativo
 
+# 3) Variable Receptores de progesterona:
+modelo2_con_pgr <- coxph(Surv(dtime, death) ~ age + grade + size + pgr, 
+                         ties = "breslow", data = datos)
+ 
+lrtest(modelo2, modelo2_con_pgr) #No es significativa
 
+# En resumen, el efecto de la Quimioterapia es significativo en un modelo que incluye también a la edad y el grado y tamaño del tumor. Tratamiento hormonal y Receptores de Progesterona siguen sin ser significativos.
+
+# Llamamos "modelo 3" a nuestro nuevo modelo
+modelo3 <- coxph(Surv(dtime, death) ~ age + chemo + grade + size,
+                 ties = "breslow", data = datos)
 ```
-
 
 ##Linealidad
 
-Cuando se tienen variables de tipo continua debe analizarse en que forma se las incluye en modelo y hay dos opciones de inclusión (?): lineal y no lineal; esta última contempla tanto la idea de categorizar la variable como la de una función de ella (logaritmo, al cuadrado, etc).
+Cuando se tienen variables de tipo continua debe analizarse en qué forma se las incluye en el modelo y hay dos opciones de inclusión (?): lineal y no lineal; esta última contempla tanto la idea de categorizar la variable como la de una función de ella (logaritmo, al cuadrado, etc).
 
 ```{r, eval = FALSE}
-datos1 <- datos %>% 
+# Variable Edad
+datos2 <- datos %>% 
   mutate(
     age_d1 = ifelse(age >= 40 & age < 50, 1, 0),
     age_d2 = ifelse(age >= 50 & age < 70, 1, 0),
@@ -285,26 +290,25 @@ datos1 <- datos %>%
     )
   )
 
-mod_edad_dummie <- coxph(Surv(dtime, death) ~ age_d1 + age_d2 + age_d3, ties = "breslow", data = datos1)
+modelo3_edad_dummie <- coxph(Surv(dtime, death) ~ age_d1 + age_d2 + age_d3
+                             + chemo + grade + size, ties = "breslow",
+                             data = datos2)
 
-mod_edad_factor <- coxph(Surv(dtime, death) ~ age_factor, ties = "breslow", data = datos1)
+modelo3_edad_factor <- coxph(Surv(dtime, death) ~ age_factor + chemo + grade + size, ties = "breslow", data = datos2)
 
-
-lrtest(mod_edad_factor, mod_edad_dummie)
+lrtest(modelo3_edad_factor, modelo3_edad_dummie) # Test no significativo
 ```
 
-La probabilidad asociada en mayor al 5%, entonces la variable es lineal.
+La probabilidad asociada es mayor al 5%, entonces la variable es lineal.
 
 Ahora probamos si receptores de progesterona y receptores de estrógeno son lineales con la variable Edad en el modelo.
 
 
 ```{r, eval=FALSE}
-
-# Receptores de progesterona
-
+# Variable Receptores de progesterona
 quantile(datos$pgr, probs = c(0.25, 0.5, 0.75))
 
-datos2 <- datos %>% 
+datos3 <- datos %>% 
   mutate(
     pgr_d1 = ifelse(pgr >= 4 & pgr < 39, 1, 0),
     pgr_d2 = ifelse(pgr >= 39 & pgr < 187, 1, 0),
@@ -319,25 +323,29 @@ datos2 <- datos %>%
     )
   )
 
+modelo3_pgr_dummie <- coxph(Surv(dtime, death) ~ age + chemo + pgr_d1 +
+                            pgr_d2 + pgr_d3 + grade + size,
+                            ties = "breslow", data = datos3)
 
-mod_eda_pgr <- coxph(Surv(dtime, death) ~ age + pgr_d1 + pgr_d2 + pgr_d3, ties = "breslow", data = datos2)
+modelo3_pgr_factor <- coxph(Surv(dtime, death) ~ age + chemo + pgr_factor +
+                            grade + size, ties = "breslow", data = datos3)
 
 
-mod_edad_pgrf <- coxph(Surv(dtime, death) ~ age + pgr_factor, ties = "breslow", data = datos2)
-
-
-lrtest(mod_edad_pgrf, mod_edad_pgrd) # Test significativo. No hay linealidad
+lrtest(modelo3_pgr_factor, modelo3_pgr_dummie) # Test significativo.
 
 # Probamos el efecto de los receptores de progesterona incluidos al modelo 
 # con varaibles dummies.
 
-lrtest(modelo_edad, mod_edad_pgrd) # Test no significativo
+lrtest(modelo3, modelo3_pgr_dummie) # Test significativo
+```
 
+La variable "Receptores de progesterona" no solo resultó no ser lineal, sino que al incluirla al modelo a través de variables dummies resulta ser significativa.
 
-# Receptores de estrógeno
+```{r, eval=FALSE}
+# Variable Receptores de estrógeno
 quantile(datos$er, probs = c(0.25, 0.5, 0.75))
 
-datos2 <- datos %>% 
+datos4 <- datos %>% 
   mutate(
     er_d1 = ifelse(er >= 9 & er < 62, 1, 0),
     er_d2 = ifelse(er >= 62 & er < 188, 1, 0),
@@ -352,14 +360,12 @@ datos2 <- datos %>%
     )
   )
 
-mod_edad_erd <- coxph(Surv(dtime, death == 0) ~ age + er_d1 + er_d2 + er_d3, ties = "breslow", data = datos2)
+modelo3_er_dummie <- coxph(Surv(dtime, death) ~ age + chemo + er_d1 + er_d2
+                           + er_d3 + grade + size, ties = "breslow",
+                           data = datos4)
 
-mod_edad_erf <- coxph(Surv(dtime, death == 0) ~ age + er_factor, ties = "breslow", data = datos2)
+modelo3_er_factor <- coxph(Surv(dtime, death) ~ age + chemo + er_factor +
+                             grade + size, ties = "breslow", data = datos4)
 
-
-lrtest(mod_edad_erf, mod_edad_erd) # Test significativo. No hay linealidad
-
-# Probamos el efecto de los receptores de estrógeno incluidos al modelo con # varaibles dummies.
-
-lrtest(modelo_edad, mod_edad_erd) # Test no significativo
+lrtest(modelo3_er_factor, modelo3_er_dummie) # Test no significativo.
 ```

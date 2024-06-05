@@ -47,13 +47,16 @@ library(gridExtra)
 library(survival)  # Para el ajuste de modelos de Cox 
 library(survminer) # Crear gráficos con la función ggsurvplot()
 library(lmtest) # Para calcular la significancia de los Beta 
+library(corrplot) #Para el gráfico de correlaciones
 
 datos <- rotterdam %>%
   filter(year <= 1985) %>%
   select(-c(nodes, rtime, recur))
+
+datos$grade <- as.factor(datos$grade)
 ```
 
-##Selección del modelo
+## Selección del modelo
 
 ```{r, echo=FALSE}
 #Modelo sin covariables
@@ -235,7 +238,7 @@ Modelo & \textit{p-value asociado} & Decisión \\
 5 & \text{~ 0} & \text{Rechazo H}_0 \\
 \end {array} $$
 
-El modelo que se obtendría sería $h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{edad}_i + \beta_2 \cdot G_{1i} + \beta_3 \cdot G_{2i} + \beta_4 \cdot S_{1i} + \beta_5 \cdot S_{2i})$. Sin embargo, este no es el modelo final dado que falta evaluar si, ahora con otras variables en el modelo, aquellas que no resultaron significativas de manera univariada (Nota para RO: no sé si esa es la palabra, no lo tengo anotado :( )
+El modelo que se obtendría sería $h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{edad}_i + \beta_2 \cdot G_{1i} + \beta_3 \cdot G_{2i} + \beta_4 \cdot S_{1i} + \beta_5 \cdot S_{2i})$. Sin embargo, este no es el modelo final dado que falta evaluar si ahora, con otras variables en el modelo, aquellas que no resultaron significativas de manera univariada lo son.
 
 ```{r}
 # Modelo con las variables significativas hasta el momento
@@ -268,11 +271,29 @@ lrtest(modelo2, modelo2_con_pgr) #No es significativa
 modelo3 <- coxph(Surv(dtime, death) ~ age + chemo + grade + size,
                  ties = "breslow", data = datos)
 ```
+Nuevamente se analizan los resultados brindados por la comparación entre los modelos:
 
-##Linealidad
+$$ \begin {array} {c|c|c}
+\text{Variable agregada} & \textit{p-value asociado} & Decisión \\
+\hline
+\text{Tratamiento hormonal} & 0.542 & \text{No rechazo H}_0 \\
+\text{Quimioterapia} & 0.021 & \text{Rechazo H}_0 \\
+\text{Receptores de progesterona} & 0.381 & \text{No rechazo H}_0 \\
+\end {array} $$
 
-Cuando se tienen variables de tipo continua debe analizarse en qué forma se las incluye en el modelo y hay dos opciones de inclusión (?): lineal y no lineal; esta última contempla tanto la idea de categorizar la variable como la de una función de ella (logaritmo, al cuadrado, etc).
+De esta manera, el modelo final sería $h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{edad}_i + \beta_2 \cdot \text{chemo}_i + \beta_3 \cdot G_{1i} + \beta_4 \cdot G_{2i} + \beta_5 \cdot S_{1i} + \beta_6 \cdot S_{2i})$
 
+
+## Linealidad
+
+Cuando se tienen variables de tipo continua debe analizarse en qué forma se las incluye en el modelo y hay dos opciones para ello: lineal y no lineal; esta última contempla tanto la idea de categorizar la variable como la de trabajar con una función de ella (logaritmo, al cuadrado, etc).
+Las hipótesis que se plantean son:
+$$\begin{align}
+
+H_0) \text{El efecto de Edad es lineal} \\
+H_1) \text{El efecto de Edad NO es lineal}
+
+\end{align}$$
 ```{r, eval = FALSE}
 # Variable Edad
 datos2 <- datos %>% 
@@ -300,72 +321,39 @@ lrtest(modelo3_edad_factor, modelo3_edad_dummie) # Test no significativo
 ```
 
 La probabilidad asociada es mayor al 5%, entonces la variable es lineal.
+Con este resultado, se concluye que el modelo definitivo es el presentado con anterioridad:
+$$
+h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{edad}_i + \beta_2 \cdot \text{chemo}_i + \beta_3 \cdot G_{1i} + \beta_4 \cdot G_{2i} + \beta_5 \cdot S_{1i} + \beta_6 \cdot S_{2i})
+$$
+## Comprobación de supuesto
 
-Ahora probamos si receptores de progesterona y receptores de estrógeno son lineales con la variable Edad en el modelo.
-
-
-```{r, eval=FALSE}
-# Variable Receptores de progesterona
-quantile(datos$pgr, probs = c(0.25, 0.5, 0.75))
-
-datos3 <- datos %>% 
-  mutate(
-    pgr_d1 = ifelse(pgr >= 4 & pgr < 39, 1, 0),
-    pgr_d2 = ifelse(pgr >= 39 & pgr < 187, 1, 0),
-    pgr_d3 = ifelse(pgr >= 187, 1, 0)
-  ) %>% 
-  mutate(
-    pgr_factor =case_when(
-      pgr < 4 ~ 1,
-      pgr >= 4 & pgr <  39 ~ 2,
-      pgr >= 39 & pgr <187 ~ 3,
-      pgr >= 187 ~ 4
-    )
-  )
-
-modelo3_pgr_dummie <- coxph(Surv(dtime, death) ~ age + chemo + pgr_d1 +
-                            pgr_d2 + pgr_d3 + grade + size,
-                            ties = "breslow", data = datos3)
-
-modelo3_pgr_factor <- coxph(Surv(dtime, death) ~ age + chemo + pgr_factor +
-                            grade + size, ties = "breslow", data = datos3)
+Como es sabido, todo el trabajo realizado se desarrolló suponiendo que los hazards son proporcionales pero ¿Se cumple esto?
+Se comprabará de mediante el uso de los residuos de Schoenfeld obtenidos para cada variable
+```{r}
+#H_0)Los hazards son proporcionales
+test <- cox.zph(modelo3)
+kableExtra::kable(test$table, col.names = c("Chi-cuadrado", "g.l", "p-asoc"))
 
 
-lrtest(modelo3_pgr_factor, modelo3_pgr_dummie) # Test significativo.
+#Convertimos la información de "test" en datos que puedan usarse en ggplot()
+time <- test$x
+residuals <- as.data.frame(test$y)
+variables <- c("Edad", "Quimioterapia", "Grado", "Tamaño")
 
-# Probamos el efecto de los receptores de progesterona incluidos al modelo 
-# con varaibles dummies.
+data <- data.frame(
+  time = rep(time, ncol(residuals)),
+  residuals =as.vector(as.matrix(residuals)),
+  variable = rep(variables, each = length(time))
+)
 
-lrtest(modelo3, modelo3_pgr_dummie) # Test significativo
+#Gráfico de residuos
+ggplot(data = data, aes(x = time, y = residuals)) +
+  geom_point(pch = 21, color = "black") +
+  geom_smooth(method = "loess", se = F, color = "steelblue2") +
+  facet_wrap(~variable, scales = "free_y")+
+  labs(x = "Tiempo", y = "Residuos", caption = "Gráfico : Evaluación de la proporcionalidad") +
+  theme_bw()
 ```
 
-La variable "Receptores de progesterona" no solo resultó no ser lineal, sino que al incluirla al modelo a través de variables dummies resulta ser significativa.
 
-```{r, eval=FALSE}
-# Variable Receptores de estrógeno
-quantile(datos$er, probs = c(0.25, 0.5, 0.75))
-
-datos4 <- datos %>% 
-  mutate(
-    er_d1 = ifelse(er >= 9 & er < 62, 1, 0),
-    er_d2 = ifelse(er >= 62 & er < 188, 1, 0),
-    er_d3 = ifelse(er >= 188, 1, 0)
-  ) %>% 
-  mutate(
-    er_factor =case_when(
-      er < 9 ~ 1,
-      er >= 9 & er < 62 ~ 2,
-      er >= 62 & er <188 ~ 3,
-      er >= 188 ~ 4
-    )
-  )
-
-modelo3_er_dummie <- coxph(Surv(dtime, death) ~ age + chemo + er_d1 + er_d2
-                           + er_d3 + grade + size, ties = "breslow",
-                           data = datos4)
-
-modelo3_er_factor <- coxph(Surv(dtime, death) ~ age + chemo + er_factor +
-                             grade + size, ties = "breslow", data = datos4)
-
-lrtest(modelo3_er_factor, modelo3_er_dummie) # Test no significativo.
-```
+La función `cox.zph()`, de manera global, dice que el supuesto no es cierto ya que se rechaza la hipotesis nula y además brinda información acerca de cuales variables no estarían cumpliento la proporcionalidad: *Edad* y *Quimioterapia*. Esto puede constatarse de forma gráfica al ver que los residuos de esas 2 variables no siguen un patrón de paralelismo como la hacen los residuos de *Tamaño* y *Grado*. (REVISAR ESTA REDACCIÓN)

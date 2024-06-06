@@ -336,7 +336,54 @@ $$ \begin{array} {c|c|c}
 \text{Receptores de progesterona} & 0.3811 & \text{No rechazo H}_0 \\
 \end{array} $$
 
-De esta manera, el modelo final sería $h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{edad}_i + \beta_2 \cdot \text{chemo}_i + \beta_3 \cdot G_{1i} + \beta_4 \cdot G_{2i} + \beta_5 \cdot S_{1i} + \beta_6 \cdot S_{2i})$
+De esta manera, el modelo sería $h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{edad}_i + \beta_2 \cdot \text{chemo}_i + \beta_3 \cdot G_{1i} + \beta_4 \cdot G_{2i} + \beta_5 \cdot S_{1i} + \beta_6 \cdot S_{2i})$
+
+Una vez definido, se prueban las distintas interacciones dobles entre las variables y resulta que ninguna es significativa. Por lo que no se altera el modelo.
+
+```{r, include=FALSE}
+
+#Interaccion Edad-Quimioterapia
+modelo_int1 <- coxph(Surv(dtime, death) ~ age + chemo +  grade + size + age*chemo,
+                     ties = "breslow", data = datos)
+
+lrtest(modelo3, modelo_int1) #Test no significativo
+
+
+#Interacción Edad-Grado
+modelo_int2 <- coxph(Surv(dtime, death) ~ age + chemo +  grade + size + age*grade,
+                     ties = "breslow", data = datos)
+
+lrtest(modelo3, modelo_int2) #Test no significativo
+
+
+#Interacción Edad-Tamaño:
+modelo_int3 <- coxph(Surv(dtime, death) ~ age + chemo +  grade + size + age*size,
+                     ties = "breslow", data = datos)
+
+lrtest(modelo3, modelo_int3) #Test no significativo
+
+
+#Interacción Quimioterapia-Grado:
+modelo_int4 <- coxph(Surv(dtime, death) ~ age + chemo +  grade + size + chemo*grade,
+                     ties = "breslow", data = datos)
+
+lrtest(modelo3, modelo_int4) #Test no significativo
+
+
+#Interacción Quimioterapia-Tamaño:
+modelo_int5 <- coxph(Surv(dtime, death) ~ age + chemo +  grade + size + chemo*size,
+                     ties = "breslow", data = datos)
+
+lrtest(modelo3, modelo_int5) #Test no significativo
+
+
+#Interacción Grado-Tamaño:
+modelo_int6 <- coxph(Surv(dtime, death) ~ age + chemo +  grade + size + grade*size,
+                     ties = "breslow", data = datos)
+
+lrtest(modelo3, modelo_int6) #Test no significativo
+
+```
 
 
 ## Linealidad
@@ -485,4 +532,7 @@ Se concluye entonces que el supuesto de hazards proporcionales se satisface para
 
 Por lo que el modelo final estimado resulta ser $$\hat{h_i} (t) = \hat{h_0} (t) \cdot exp(-0.05 \cdot A_{1i} + 0.47 \cdot A_{2i} + 1 \cdot A_{3i} + 0.31 \cdot G_{2i} + 0.38 \cdot S_{1i} + 0.81 \cdot S_{2i})$$ para *Quimioterapia* = 0 y 
 $$\hat{h_i} (t) = \hat{h_0} (t) \cdot exp(0.95 \cdot A_{1i} + 1.6 \cdot A_{2i} + 2.73 \cdot A_{3i} + 1.36 \cdot G_{2i} + 1.46 \cdot S_{1i} + 2.25 \cdot S_{2i})$$ para *Quimioterapia* = 1.
+
+
+
 

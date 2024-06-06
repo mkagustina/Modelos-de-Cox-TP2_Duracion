@@ -20,6 +20,10 @@ date: "Año 2024"
 output: pdf_document
 ---
 
+```{r setup, echo=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE, echo = FALSE)
+```
+
 ## Introducción
 
 El cáncer de mama es un tipo de cáncer primario, que se origina en la mama y puede propagarse a otros tejidos u órganos del cuerpo. Es el tipo de cáncer más frecuente y la causa más común de muerte por cáncer en mujeres a nivel mundial.[^1]
@@ -41,7 +45,7 @@ Los datos fueron obtenidos de la base *rotterdam* del paquete *survival* de R. L
 
 De la totalidad de mujeres en estudio, se cuenta con el tiempo exacto hasta la muerte de 377 de ellas y 206 censuras.
 
-```{r echo=FALSE, warning=FALSE, message=FALSE}
+```{r echo=FALSE}
 library(tidyverse)
 library(gridExtra)
 library(survival)  # Para el ajuste de modelos de Cox 
@@ -58,7 +62,7 @@ datos$grade <- as.factor(datos$grade)
 
 ## Selección del modelo
 
-```{r, echo=FALSE}
+```{r, include=FALSE}
 #Modelo sin covariables
 modelo_nulo <- coxph(Surv(dtime, death) ~ 1, ties = "breslow", data = datos)
 loglik_nulo <- modelo_nulo$loglik
@@ -139,7 +143,39 @@ lrtest(modelo_nulo, modelo_size) #Test significativo
 
 # En resumen, resultaron significativos: edad, menopausia, receptores de estrógeno, grado de diferenciación y tamaño del tumor.
 ```
-Tras comparar los modelos simples o univariados con aquel sin covariables, se determinó que las variables más "importantes" son: Edad, Menopausia, Receptores de progesterona, Grado de diferenciación y Tamaño del tumor. Sin embargo, no se conoce si todas en conjunto son significativas o solo algunas, por esto se planteará un modelo aditivo con ellas y se probará, cada una por separado, si afectan el ajuste del modelo aditivo.
+
+En primer lugar se compara, para cada variable, su modelo univariado contra un modelo sin covariables. Las hipótesis en contraste son:
+
+\begin{align*}
+\begin{cases}
+H_0) \quad &\beta_j = 0 \\
+&\qquad \qquad \quad \text{con} \; j = \overline{1,8} \\
+H_1) \quad &\beta_j \neq 0
+\end{cases}
+\end{align*}
+
+Los resultados obtenidos son los siguientes:
+
+$$
+\begin{array}{c|c|c}
+\text{Variable} & p\,\text{-value} & \text{Decisión}\\
+\hline
+\text{Edad} & 0.0000 & \text{Rechazo H}_0\\
+\text{Menopausia} & 0.0000 & \text{Rechazo H}_0\\
+\text{Tratamiento hormonal} & 0.8381 & \text{No rechazo H}_0\\
+\text{Quimioterapia} & 0.4217 & \text{No rechazo H}_0\\
+\text{Receptores de progesterona} & 0.1316 & \text{No rechazo H}_0\\
+\text{Receptores de estrógeno} & 0.0017 & \text{Rechazo H}_0\\
+\text{Grado de diferenciación} & 0.0004 & \text{Rechazo H}_0\\
+\text{Tamaño} & 0.0000 & \text{Rechazo H}_0
+\end{array}
+$$
+
+Se determina entonces que las variables significativas en esta etapa de la selección de variables son: Edad, Menopausia, Receptores de estrógeno, Grado de diferenciación y Tamaño del tumor. 
+
+En segundo lugar, se evaluará si cada una de esas variables siguen siendo significativas en presencia de las demás.
+
+Para cada variable, se compara un modelo aditivo que contenga todas las variables significativas hasta el momento, excepto la variable en cuestión, contra un modelo que contenga todas las variables significativas.
 
 Previo a esta comparación de modelos, se definen 2 *dummies* referentes a la variable *Tamaño* y otras 2 para la variable *Grado*:
 
@@ -154,40 +190,45 @@ Previo a esta comparación de modelos, se definen 2 *dummies* referentes a la va
 \]
 
 
-Modelo aditivo: 
+- Modelo aditivo: 
 
 $$
 h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{edad}_i + \beta_2 \cdot \text{meno}_i + \beta_3 \cdot \text{er}_i + \beta_4 \cdot G_{1i} + \beta_5 \cdot G_{2i} + \beta_6 \cdot S_{1i} + \beta_7 \cdot S_{2i})
 $$
 
--   Modelos de comparación:
+- Modelos de comparación:
 
 1) Sin la variable *Edad*: 
 
-$h_i(t) = h_0(t) \cdot \exp(\beta_2 \cdot \text{meno}_i + \beta_3 \cdot \text{er}_i + \beta_4 \cdot G_{1i} + \beta_5 \cdot G_{2i} + \beta_6 \cdot S_{1i} + \beta_7 \cdot S_{2i})$
+$$h_i(t) = h_0(t) \cdot \exp(\beta_2 \cdot \text{meno}_i + \beta_3 \cdot \text{er}_i + \beta_4 \cdot G_{1i} + \beta_5 \cdot G_{2i} + \beta_6 \cdot S_{1i} + \beta_7 \cdot S_{2i})$$
 
 2) Sin la variable *Menopausia*: 
 
-$h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{edad}_i + \beta_3 \cdot \text{er}_i + \beta_4 \cdot G_{1i} + \beta_5 \cdot G_{2i} + \beta_6 \cdot S_{1i} + \beta_7 \cdot S_{2i})$
+$$h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{edad}_i + \beta_3 \cdot \text{er}_i + \beta_4 \cdot G_{1i} + \beta_5 \cdot G_{2i} + \beta_6 \cdot S_{1i} + \beta_7 \cdot S_{2i})$$
 
 3) Sin la variable *Receptores de estrógeno*: 
 
-$h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{edad}_i + \beta_2 \cdot \text{meno}_i + \beta_4 \cdot G_{1i} + \beta_5 \cdot G_{2i} + \beta_6 \cdot S_{1i} + \beta_7 \cdot S_{2i})$
+$$h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{edad}_i + \beta_2 \cdot \text{meno}_i + \beta_4 \cdot G_{1i} + \beta_5 \cdot G_{2i} + \beta_6 \cdot S_{1i} + \beta_7 \cdot S_{2i})$$
 
 4) Sin la variable *Grado de diferenciación del tumor*: 
 
-$h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{edad}_i + \beta_2 \cdot \text{meno}_i + \beta_3 \cdot \text{er}_i + \beta_6 \cdot S_{1i} + \beta_7 \cdot S_{2i})$
+$$h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{edad}_i + \beta_2 \cdot \text{meno}_i + \beta_3 \cdot \text{er}_i + \beta_6 \cdot S_{1i} + \beta_7 \cdot S_{2i})$$
 
 5) Sin la variable *Tamaño del tumor*: 
 
-$h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{edad}_i + \beta_2 \cdot \text{meno}_i + \beta_3 \cdot \text{er}_i + \beta_4 \cdot G_{1i} + \beta_5 \cdot G_{2i})$
+$$h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{edad}_i + \beta_2 \cdot \text{meno}_i + \beta_3 \cdot \text{er}_i + \beta_4 \cdot G_{1i} + \beta_5 \cdot G_{2i})$$
+## ARREGLAR ESSTO
+\underline{Hipótesis}: las hipótesis del test para la $j$-ésima variable es:
 
-
-Hipótesis: $H_0: \beta_j = 0$ vs. $H_1: \beta_j \neq 0$ con $j = \overline{1:7}$
-
-   El subíndice de $\beta$ tomará el valor correspondiente según cuál variable es de interés probar su significancia.
+\begin{align*}
+\begin{cases}
+H_0) \quad &\beta_j = 0 \\
+&\qquad \qquad \quad \text{con} \; j = \overline{1,7} \\
+H_1) \quad &\beta_j \neq 0
+\end{cases}
+\end{align*}
    
-```{r}
+```{r, include=FALSE}
 #Se define el modelo con las variables importantes:
 modelo1 <- coxph(Surv(dtime, death) ~ age + meno + er + grade + size,
                  ties = "breslow", data = datos)
@@ -228,19 +269,21 @@ lrtest(modelo_sin_size, modelo1) # Test significativo
 ```
 Teniendo en cuenta que los resultados de las comparaciones de los modeloes fueron los siguientes:
 
-$$ \begin {array} {c|c|c}
-Modelo & \textit{p-value asociado} & Decisión \\
+$$
+\begin {array} {c|c|c}
+\text{Variable} & p\,\text{-value} & \text{Decisión} \\
 \hline
-1 & 0.023 & \text{Rechazo H}_0 \\
-2 & 0.559 & \text{Rechazo H}_0 \\
-3 & 0.128 & \text{No rechazo H}_0 \\
-4 & 0.006 & \text{No rechazo H}_0 \\
-5 & \text{~ 0} & \text{Rechazo H}_0 \\
-\end {array} $$
+\text{Edad} & 0.0229 & \text{Rechazo H}_0 \\
+\text{Menopausia} & 0.5586 & \text{No rechazo H}_0 \\
+\text{Receptores de estrógeno} & 0.1276 & \text{No rechazo H}_0 \\
+\text{Grado de diferenciación} & 0.0056 & \text{Rechazo H}_0 \\
+\text{Tamaño} & \sim 0 & \text{Rechazo H}_0 \\
+\end {array}
+$$
 
 El modelo que se obtendría sería $h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{edad}_i + \beta_2 \cdot G_{1i} + \beta_3 \cdot G_{2i} + \beta_4 \cdot S_{1i} + \beta_5 \cdot S_{2i})$. Sin embargo, este no es el modelo final dado que falta evaluar si ahora, con otras variables en el modelo, aquellas que no resultaron significativas de manera univariada lo son.
 
-```{r}
+```{r, include=FALSE}
 # Modelo con las variables significativas hasta el momento
 modelo2 <- coxph(Surv(dtime, death) ~ age + grade + size, ties = "breslow",
                  data = datos)
@@ -273,13 +316,13 @@ modelo3 <- coxph(Surv(dtime, death) ~ age + chemo + grade + size,
 ```
 Nuevamente se analizan los resultados brindados por la comparación entre los modelos:
 
-$$ \begin {array} {c|c|c}
-\text{Variable agregada} & \textit{p-value asociado} & Decisión \\
+$$ \begin{array} {c|c|c}
+\text{Variable} & p\,\text{-value} & \text{Decisión} \\
 \hline
-\text{Tratamiento hormonal} & 0.542 & \text{No rechazo H}_0 \\
-\text{Quimioterapia} & 0.021 & \text{Rechazo H}_0 \\
-\text{Receptores de progesterona} & 0.381 & \text{No rechazo H}_0 \\
-\end {array} $$
+\text{Tratamiento hormonal} & 0.5420 & \text{No rechazo H}_0 \\
+\text{Quimioterapia} & 0.0209 & \text{Rechazo H}_0 \\
+\text{Receptores de progesterona} & 0.3811 & \text{No rechazo H}_0 \\
+\end{array} $$
 
 De esta manera, el modelo final sería $h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{edad}_i + \beta_2 \cdot \text{chemo}_i + \beta_3 \cdot G_{1i} + \beta_4 \cdot G_{2i} + \beta_5 \cdot S_{1i} + \beta_6 \cdot S_{2i})$
 
@@ -288,12 +331,12 @@ De esta manera, el modelo final sería $h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot
 
 Cuando se tienen variables de tipo continua debe analizarse en qué forma se las incluye en el modelo y hay dos opciones para ello: lineal y no lineal; esta última contempla tanto la idea de categorizar la variable como la de trabajar con una función de ella (logaritmo, al cuadrado, etc).
 Las hipótesis que se plantean son:
-$$\begin{align}
 
-H_0) \text{El efecto de Edad es lineal} \\
-H_1) \text{El efecto de Edad NO es lineal}
+\begin{align*}
+H_0)\quad &\text{El efecto de Edad es lineal} \\
+H_1)\quad &\text{El efecto de Edad NO es lineal}
+\end{align*}
 
-\end{align}$$
 ```{r, eval = FALSE}
 # Variable Edad
 datos2 <- datos %>% 
@@ -325,7 +368,8 @@ Con este resultado, se concluye que el modelo definitivo es el presentado con an
 $$
 h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{edad}_i + \beta_2 \cdot \text{chemo}_i + \beta_3 \cdot G_{1i} + \beta_4 \cdot G_{2i} + \beta_5 \cdot S_{1i} + \beta_6 \cdot S_{2i})
 $$
-## Comprobación de supuesto
+
+## Comprobación de supuestos
 
 Como es sabido, todo el trabajo realizado se desarrolló suponiendo que los hazards son proporcionales pero ¿Se cumple esto?
 Se comprabará de mediante el uso de los residuos de Schoenfeld obtenidos para cada variable

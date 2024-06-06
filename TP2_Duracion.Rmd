@@ -173,14 +173,14 @@ $$
 \begin{array}{c|c|c}
 \text{Variable} & p\,\text{-value} & \text{Decisión}\\
 \hline
-\text{Edad} & 0.0000 & \text{Rechazo H}_0\\
-\text{Menopausia} & 0.0000 & \text{Rechazo H}_0\\
+\text{Edad} & \sim 0 & \text{Rechazo H}_0\\
+\text{Menopausia} & \sim 0 & \text{Rechazo H}_0\\
 \text{Tratamiento hormonal} & 0.8381 & \text{No rechazo H}_0\\
 \text{Quimioterapia} & 0.4217 & \text{No rechazo H}_0\\
 \text{Receptores de progesterona} & 0.1316 & \text{No rechazo H}_0\\
 \text{Receptores de estrógeno} & 0.0017 & \text{Rechazo H}_0\\
 \text{Grado de diferenciación} & 0.0004 & \text{Rechazo H}_0\\
-\text{Tamaño} & 0.0000 & \text{Rechazo H}_0
+\text{Tamaño} & \sim 0 & \text{Rechazo H}_0
 \end{array}
 $$
 
@@ -193,7 +193,7 @@ Para cada variable, se compara un modelo aditivo que contenga todas las variable
 - Modelo aditivo: 
 
 $$
-h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{edad}_i + \beta_2 \cdot \text{meno}_i + \beta_3 \cdot \text{er}_i + \beta_4 \cdot G_{1i} + \beta_5 \cdot G_{2i} + \beta_6 \cdot S_{1i} + \beta_7 \cdot S_{2i})
+h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{age}_i + \beta_2 \cdot \text{meno}_i + \beta_3 \cdot \text{er}_i + \beta_4 \cdot G_{1i} + \beta_5 \cdot G_{2i} + \beta_6 \cdot S_{1i} + \beta_7 \cdot S_{2i})
 $$
 
 - Modelos de comparación:
@@ -204,23 +204,23 @@ $$h_i(t) = h_0(t) \cdot \exp(\beta_2 \cdot \text{meno}_i + \beta_3 \cdot \text{e
 
 2) Sin la variable *Menopausia*: 
 
-$$h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{edad}_i + \beta_3 \cdot \text{er}_i + \beta_4 \cdot G_{1i} + \beta_5 \cdot G_{2i} + \beta_6 \cdot S_{1i} + \beta_7 \cdot S_{2i})$$
+$$h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{age}_i + \beta_3 \cdot \text{er}_i + \beta_4 \cdot G_{1i} + \beta_5 \cdot G_{2i} + \beta_6 \cdot S_{1i} + \beta_7 \cdot S_{2i})$$
 
 3) Sin la variable *Receptores de estrógeno*: 
 
-$$h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{edad}_i + \beta_2 \cdot \text{meno}_i + \beta_4 \cdot G_{1i} + \beta_5 \cdot G_{2i} + \beta_6 \cdot S_{1i} + \beta_7 \cdot S_{2i})$$
+$$h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{age}_i + \beta_2 \cdot \text{meno}_i + \beta_4 \cdot G_{1i} + \beta_5 \cdot G_{2i} + \beta_6 \cdot S_{1i} + \beta_7 \cdot S_{2i})$$
 
 4) Sin la variable *Grado de diferenciación del tumor*: 
 
-$$h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{edad}_i + \beta_2 \cdot \text{meno}_i + \beta_3 \cdot \text{er}_i + \beta_6 \cdot S_{1i} + \beta_7 \cdot S_{2i})$$
+$$h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{age}_i + \beta_2 \cdot \text{meno}_i + \beta_3 \cdot \text{er}_i + \beta_6 \cdot S_{1i} + \beta_7 \cdot S_{2i})$$
 
 5) Sin la variable *Tamaño del tumor*: 
 
-$$h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{edad}_i + \beta_2 \cdot \text{meno}_i + \beta_3 \cdot \text{er}_i + \beta_4 \cdot G_{1i} + \beta_5 \cdot G_{2i})$$
+$$h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{age}_i + \beta_2 \cdot \text{meno}_i + \beta_3 \cdot \text{er}_i + \beta_4 \cdot G_{1i} + \beta_5 \cdot G_{2i})$$
 
-\underline{Hipótesis}: las hipótesis del test se dividen en 2 casos: 1) la $j-$ésima variable tiene un solo $\beta_j$ asociado a ella; 2) la $j-$ésima variable tiene más de un $\beta_j$ asociado a ella.
+\underline{Hipótesis}: las hipótesis del test se dividen en 2 casos:
 
-- Caso 1):
+- Caso 1): la $j-$ésima variable tiene un solo $\beta_j$ asociado a ella
 
 \begin{align*}
 \begin{cases}
@@ -231,15 +231,16 @@ H_1) \quad &\beta_j \neq 0
 \end{align*}
 
 
-- Caso 2):
+- Caso 2): la $j-$ésima variable tiene más de un $\beta_j$ asociado a ella
 
 \begin{align*}
 \begin{cases}
-H_0) &\quad \beta_j = \beta_{j'} = 0 \\
-&\qquad \qquad \quad \text{con} \; (j, j') = \text{(4, 5) o (6, 7)} \\
-H_1) &\quad \text{Al menos un} \quad \beta_j \neq 0
+H_0) &\, \beta_j = \beta_{j'} = 0 \\
+&\qquad\qquad \qquad \qquad \qquad \text{con} \; (j, j') = \text{(4, 5) o (6, 7)} \\
+H_1) &\, \text{Al menos un} \quad \beta_j \neq 0
 \end{cases}
-\end{align*}   
+\end{align*}
+
 ```{r, include=FALSE}
 #Se define el modelo con las variables importantes:
 modelo1 <- coxph(Surv(dtime, death) ~ age + meno + er + grade + size,
@@ -293,7 +294,7 @@ $$
 \end {array}
 $$
 
-El modelo que se obtendría sería $h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{edad}_i + \beta_2 \cdot G_{1i} + \beta_3 \cdot G_{2i} + \beta_4 \cdot S_{1i} + \beta_5 \cdot S_{2i})$. Sin embargo, este no es el modelo final dado que falta evaluar si ahora, con otras variables en el modelo, aquellas que no resultaron significativas de manera univariada lo son.
+El modelo que se obtendría sería $h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{age}_i + \beta_2 \cdot G_{1i} + \beta_3 \cdot G_{2i} + \beta_4 \cdot S_{1i} + \beta_5 \cdot S_{2i})$. Sin embargo, este no es el modelo final dado que falta evaluar si ahora, con otras variables en el modelo, aquellas que no resultaron significativas de manera univariada lo son.
 
 ```{r, include=FALSE}
 # Modelo con las variables significativas hasta el momento
@@ -336,7 +337,7 @@ $$ \begin{array} {c|c|c}
 \text{Receptores de progesterona} & 0.3811 & \text{No rechazo H}_0 \\
 \end{array} $$
 
-De esta manera, el modelo sería $h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{edad}_i + \beta_2 \cdot \text{chemo}_i + \beta_3 \cdot G_{1i} + \beta_4 \cdot G_{2i} + \beta_5 \cdot S_{1i} + \beta_6 \cdot S_{2i})$
+De esta manera, el modelo sería $h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{age}_i + \beta_2 \cdot \text{chemo}_i + \beta_3 \cdot G_{1i} + \beta_4 \cdot G_{2i} + \beta_5 \cdot S_{1i} + \beta_6 \cdot S_{2i})$
 
 Una vez definido, se prueban las distintas interacciones dobles entre las variables y resulta que ninguna es significativa. Por lo que no se altera el modelo.
 
@@ -425,7 +426,7 @@ lrtest(modelo3_edad_factor, modelo3_edad_dummie) # Test no significativo
 La probabilidad asociada es mayor al 5%, entonces la variable es lineal.
 Con este resultado, se concluye que el modelo definitivo es el presentado con anterioridad:
 $$
-h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{edad}_i + \beta_2 \cdot \text{chemo}_i + \beta_3 \cdot G_{1i} + \beta_4 \cdot G_{2i} + \beta_5 \cdot S_{1i} + \beta_6 \cdot S_{2i})
+h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{age}_i + \beta_2 \cdot \text{chemo}_i + \beta_3 \cdot G_{1i} + \beta_4 \cdot G_{2i} + \beta_5 \cdot S_{1i} + \beta_6 \cdot S_{2i})
 $$
 
 ## Comprobación de supuestos
@@ -444,14 +445,13 @@ $$ \begin{array} {c|c}
 \text{Quimioterapia} & 0.0438\\
 \text{Grado} & 0.2969 \\
 \text{Tamaño} & 0.1809 \\
-\text{GLOBAL} & 0.0004 \\
+\hline
+\text{Global} & 0.0004 \\
 \end{array} $$
-
-
 
 ```{r}
 #Convertimos la información de "test" en datos que puedan usarse en ggplot()
-time <- test$x
+time <- test$time
 residuals <- as.data.frame(test$y)
 variables <- c("Edad", "Quimioterapia", "Grado", "Tamaño")
 
@@ -464,16 +464,16 @@ data <- data.frame(
 #Gráfico de residuos
 ggplot(data = data, aes(x = time, y = residuals)) +
   geom_point(pch = 21, color = "black") +
-  geom_smooth(method = "loess", se = T, color = "steelblue2") +
+  geom_smooth(method = "loess", se = F, color = "steelblue2") +
   facet_wrap(~variable, scales = "free_y")+
   labs(x = "Tiempo", y = "Residuos", caption = "Gráfico 1: Evaluación de la proporcionalidad") +
   theme_bw() +
   theme(plot.caption = element_text(hjust = 0.5))
 ```
 
+La función `cox.zph()`, de manera global, dice que el supuesto no es cierto ya que se rechaza la hipótesis nula. Además, brinda información acerca de qué variables no estarían cumpliendo la proporcionalidad de los hazards: *Edad* y *Quimioterapia*. Esto puede constatarse también de forma gráfica al ver que los residuos de *Quimioterapia* no están divididos en dos grupos (cantidad de categorías que tiene), lo que sí sucede con *Grado* y *Tamaño*. 
 
-La función `cox.zph()`, de manera global, dice que el supuesto no es cierto ya que se rechaza la hipotesis nula y además brinda información acerca de cuales variables no estarían cumpliento la proporcionalidad: *Edad* y *Quimioterapia*. Esto puede constatarse también de forma gráfica al ver que los residuos de *Quimioterapia* no están divididos en dos grupos (cantidad de categorías que tiene) tal como *Grado* y que los de *Edad* no siguen un patron tan aleatorio.
-
+De la variable *Edad*, por ser continua, se debería observar un patrón aleatorio, pero se observa que los puntos están menos dispersos al avanzar el tiempo.
 
 Para incluir las variables que son significativas pero no cumplen el supuesto de proporcionalidad, se decide lo siguiente:
 
@@ -493,13 +493,14 @@ $$ \begin{array} {c|c}
 \text{Edad} & 0.07 \\
 \text{Grado} & 0.22 \\
 \text{Tamaño} & 0.15 \\
-\text{GLOBAL} & 0.04 \\
+\hline
+\text{Global} & 0.04 \\
 \end{array} $$
 
 
 ```{r, fig.height=4}
 #Convertimos la información de "test2" en datos que puedan usarse en ggplot()
-time <- test2$x
+time <- test2$time
 residuals <- as.data.frame(test2$y)
 variables <- c("Edad", "Grado", "Tamaño")
 
@@ -533,9 +534,3 @@ Se concluye entonces que el supuesto de hazards proporcionales se satisface para
 Por lo que el modelo final estimado resulta ser $$\hat{h_i} (t) = \hat{h_0} (t) \cdot exp(-0.05 \cdot A_{1i} + 0.47 \cdot A_{2i} + 1 \cdot A_{3i} + 0.31 \cdot G_{2i} + 0.38 \cdot S_{1i} + 0.81 \cdot S_{2i})$$ para *Quimioterapia* = 0 y 
 $$\hat{h_i} (t) = \hat{h_0} (t) \cdot exp(0.95 \cdot A_{1i} + 1.6 \cdot A_{2i} + 2.73 \cdot A_{3i} + 1.36 \cdot G_{2i} + 1.46 \cdot S_{1i} + 2.25 \cdot S_{2i})$$ para *Quimioterapia* = 1.
 
-<<<<<<< HEAD
-=======
-
-
-
->>>>>>> b6fd99f73cec3c511708a6fde02c64403086e850

@@ -144,7 +144,20 @@ lrtest(modelo_nulo, modelo_size) #Test significativo
 # En resumen, resultaron significativos: edad, menopausia, receptores de estrógeno, grado de diferenciación y tamaño del tumor.
 ```
 
-En primer lugar se compara, para cada variable, su modelo univariado contra un modelo sin covariables. Las hipótesis en contraste son:
+En primer lugar se compara, para cada variable, su modelo univariado contra un modelo sin covariables.
+Previo a esto, se definen 2 *dummies* referentes a la variable *Tamaño* y otras 2 para la variable *Grado*:
+
+\[
+\begin{array}{ccc|ccc}
+\text{size} & S_1 & S_2 & \text{grade} & G_1 & G_2 \\
+\hline
+< 20 & 0 & 0 & 1 & 0 & 0 \\
+20\text{-}50 & 1 & 0 & 2 & 1 & 0 \\
+> 50 & 0 & 1 & 3 & 0 & 1 \\
+\end{array}
+\]
+
+Las hipótesis en contraste son:
 
 \begin{align*}
 \begin{cases}
@@ -177,19 +190,6 @@ En segundo lugar, se evaluará si cada una de esas variables siguen siendo signi
 
 Para cada variable, se compara un modelo aditivo que contenga todas las variables significativas hasta el momento, excepto la variable en cuestión, contra un modelo que contenga todas las variables significativas.
 
-Previo a esta comparación de modelos, se definen 2 *dummies* referentes a la variable *Tamaño* y otras 2 para la variable *Grado*:
-
-\[
-\begin{array}{ccc|ccc}
-\text{size} & S_1 & S_2 & \text{grade} & G_1 & G_2 \\
-\hline
-< 20 & 0 & 0 & 1 & 0 & 0 \\
-20\text{-}50 & 1 & 0 & 2 & 1 & 0 \\
-> 50 & 0 & 1 & 3 & 0 & 1 \\
-\end{array}
-\]
-
-
 - Modelo aditivo: 
 
 $$
@@ -217,17 +217,29 @@ $$h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{edad}_i + \beta_2 \cdot \text{m
 5) Sin la variable *Tamaño del tumor*: 
 
 $$h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{edad}_i + \beta_2 \cdot \text{meno}_i + \beta_3 \cdot \text{er}_i + \beta_4 \cdot G_{1i} + \beta_5 \cdot G_{2i})$$
-## ARREGLAR ESSTO
-\underline{Hipótesis}: las hipótesis del test para la $j$-ésima variable es:
+
+\underline{Hipótesis}: las hipótesis del test se dividen en 2 casos: 1) la $j-$ésima variable tiene un solo $\beta_j$ asociado a ella; 2) la $j-$ésima variable tiene más de un $\beta_j$ asociado a ella.
+
+- Caso 1):
 
 \begin{align*}
 \begin{cases}
 H_0) \quad &\beta_j = 0 \\
-&\qquad \qquad \quad \text{con} \; j = \overline{1,7} \\
+&\qquad \qquad \quad \text{con} \; j = \overline{1,3} \\
 H_1) \quad &\beta_j \neq 0
 \end{cases}
 \end{align*}
-   
+
+
+- Caso 2):
+
+\begin{align*}
+\begin{cases}
+H_0) &\quad \beta_j = \beta_{j'} = 0 \\
+&\qquad \qquad \quad \text{con} \; (j, j') = \text{(4, 5) o (6, 7)} \\
+H_1) &\quad \text{Al menos un} \quad \beta_j \neq 0
+\end{cases}
+\end{align*}   
 ```{r, include=FALSE}
 #Se define el modelo con las variables importantes:
 modelo1 <- coxph(Surv(dtime, death) ~ age + meno + er + grade + size,
@@ -337,7 +349,7 @@ H_0)\quad &\text{El efecto de Edad es lineal} \\
 H_1)\quad &\text{El efecto de Edad NO es lineal}
 \end{align*}
 
-```{r, eval = FALSE}
+```{r, include=FALSE}
 # Variable Edad
 datos2 <- datos %>% 
   mutate(
@@ -372,13 +384,25 @@ $$
 ## Comprobación de supuestos
 
 Como es sabido, todo el trabajo realizado se desarrolló suponiendo que los hazards son proporcionales pero ¿Se cumple esto?
-Se comprabará de mediante el uso de los residuos de Schoenfeld obtenidos para cada variable
+Se comprabará mediante el uso de los residuos de Schoenfeld obtenidos para cada variable.
+
 ```{r}
 #H_0)Los hazards son proporcionales
 test <- cox.zph(modelo3)
-kableExtra::kable(test$table, col.names = c("Chi-cuadrado", "g.l", "p-asoc"))
+```
+$$ \begin{array} {c|c}
+\text{Variable} & p\,\text{-value} \\
+\hline
+\text{Edad} & \sim 0 \\
+\text{Quimioterapia} & 0.0438\\
+\text{Grado} & 0.2969 \\
+\text{Tamaño} & 0.1809 \\
+\text{GLOBAL} & 0.0004 \\
+\end{array} $$
 
 
+
+```{r}
 #Convertimos la información de "test" en datos que puedan usarse en ggplot()
 time <- test$x
 residuals <- as.data.frame(test$y)
@@ -393,11 +417,72 @@ data <- data.frame(
 #Gráfico de residuos
 ggplot(data = data, aes(x = time, y = residuals)) +
   geom_point(pch = 21, color = "black") +
-  geom_smooth(method = "loess", se = F, color = "steelblue2") +
+  geom_smooth(method = "loess", se = T, color = "steelblue2") +
   facet_wrap(~variable, scales = "free_y")+
-  labs(x = "Tiempo", y = "Residuos", caption = "Gráfico : Evaluación de la proporcionalidad") +
-  theme_bw()
+  labs(x = "Tiempo", y = "Residuos", caption = "Gráfico 1: Evaluación de la proporcionalidad") +
+  theme_bw() +
+  theme(plot.caption = element_text(hjust = 0.5))
 ```
 
 
-La función `cox.zph()`, de manera global, dice que el supuesto no es cierto ya que se rechaza la hipotesis nula y además brinda información acerca de cuales variables no estarían cumpliento la proporcionalidad: *Edad* y *Quimioterapia*. Esto puede constatarse de forma gráfica al ver que los residuos de esas 2 variables no siguen un patrón de paralelismo como la hacen los residuos de *Tamaño* y *Grado*. (REVISAR ESTA REDACCIÓN)
+La función `cox.zph()`, de manera global, dice que el supuesto no es cierto ya que se rechaza la hipotesis nula y además brinda información acerca de cuales variables no estarían cumpliento la proporcionalidad: *Edad* y *Quimioterapia*. Esto puede constatarse también de forma gráfica al ver que los residuos de *Quimioterapia* no están divididos en dos grupos (cantidad de categorías que tiene) tal como *Grado* y que los de *Edad* no siguen un patron tan aleatorio.
+
+
+Para incluir las variables que son significativas pero no cumplen el supuesto de proporcionalidad, se decide lo siguiente:
+
+- Categorizar la variable *Edad* con valores del 1 al 4.
+
+- Plantear un modelo nuevo con la variable *Quimioterapia* estratificada.
+
+```{r}
+modelo_estrat <- coxph(Surv(dtime, death) ~ as.factor(age_factor) + strata(chemo) + grade + size
+                       ,ties = "breslow", data = datos2)
+test2 <- cox.zph(modelo_estrat)
+```
+
+$$ \begin{array} {c|c}
+\text{Variable} & p\,\text{-value} \\
+\hline
+\text{Edad} & 0.07 \\
+\text{Grado} & 0.22 \\
+\text{Tamaño} & 0.15 \\
+\text{GLOBAL} & 0.04 \\
+\end{array} $$
+
+
+```{r, fig.height=4}
+#Convertimos la información de "test2" en datos que puedan usarse en ggplot()
+time <- test2$x
+residuals <- as.data.frame(test2$y)
+variables <- c("Edad", "Grado", "Tamaño")
+
+data <- data.frame(
+  time = rep(time, ncol(residuals)),
+  residuals =as.vector(as.matrix(residuals)),
+  variable = rep(variables, each = length(time))
+)
+
+#Gráfico de residuos
+ggplot(data = data, aes(x = time, y = residuals)) +
+  geom_point(pch = 21, color = "black") +
+  geom_smooth(method = "loess", se = F, color = "steelblue2") +
+  facet_wrap(~variable, scales = "free_y")+
+  labs(x = "Tiempo", y = "Residuos", caption = "Gráfico 2: Evaluación de la proporcionalidad") +
+  theme_bw() +
+  theme(plot.caption = element_text(hjust = 0.5))
+```
+Se puede observar que si bien el test global es significativo, las probabilidades asociadas a cada variable no lo son y gráficamente parece que el supuesto se cumple. 
+
+Se concluye entonces que el supuesto de hazards proporcionales se satisface para las siguientes variables significativas: 
+
+- Edad (categorizada)
+
+- Quimioterapia (variable de estratificación del modelo)
+
+- Grado de diferenciación.
+
+- Tamaño del tumor.
+
+Por lo que el modelo final estimado resulta ser $$\hat{h_i} (t) = \hat{h_0} (t) \cdot exp(-0.05 \cdot A_{1i} + 0.47 \cdot A_{2i} + 1 \cdot A_{3i} + 0.31 \cdot G_{2i} + 0.38 \cdot S_{1i} + 0.81 \cdot S_{2i})$$ para *Quimioterapia* = 0 y 
+$$\hat{h_i} (t) = \hat{h_0} (t) \cdot exp(0.95 \cdot A_{1i} + 1.6 \cdot A_{2i} + 2.73 \cdot A_{3i} + 1.36 \cdot G_{2i} + 1.46 \cdot S_{1i} + 2.25 \cdot S_{2i})$$ para *Quimioterapia* = 1.
+

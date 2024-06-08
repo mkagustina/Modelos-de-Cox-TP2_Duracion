@@ -482,9 +482,31 @@ Para incluir las variables que son significativas pero no cumplen el supuesto de
 - Plantear un modelo nuevo con la variable *Quimioterapia* estratificada.
 
 ```{r}
-modelo_estrat <- coxph(Surv(dtime, death) ~ as.factor(age_factor) + strata(chemo) + grade + size
-                       ,ties = "breslow", data = datos2)
-test2 <- cox.zph(modelo_estrat)
+# Modelos usando la mejor categorización para edad. Pruebo un modelo estratificando por chemo y otro sin estratificar
+
+datos_age_cat <- datos %>% 
+  mutate(
+    age_factor = case_when(
+      age < 40 ~ 1,
+      age >= 40 & age < 50 ~ 2,
+      age >= 50 & age < 65 ~ 3,
+      age >= 65 ~ 4
+    )
+  )
+
+# Modelo estratificado
+modelo_estrat <- coxph(Surv(dtime, death) ~ as.factor(age_factor) + 
+                      strata(chemo) + grade + size, ties = "breslow",
+                      data = datos_age_cat)
+# test2 <- cox.zph(modelo_estrat)
+cox.zph(modelo_estrat) # GLOBAL:0.087
+
+# Modelo sin estratificar
+modelo_sin_estrat <- coxph(Surv(dtime, death) ~ as.factor(age_factor) +
+                             chemo + grade + size, ties = "breslow",
+                       data = datos_age_cat)
+# test2 <- cox.zph(modelo_sin_estrat)
+cox.zph(modelo_sin_estrat) # GLOBAL:0.046 (pero todas las variables, incluida chemo dan significativas)
 ```
 
 $$ \begin{array} {c|c}

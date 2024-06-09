@@ -490,15 +490,23 @@ Para incluir las variables que son significativas pero no cumplen el supuesto de
 
 # Edad numerica
 modelo_estrat <- coxph(Surv(dtime, death) ~
-                      age_factor + strata(chemo)+
+                      age + strata(chemo)+
                       grade + size, ties = "breslow",
                       data = datos2)
 # test2 <- cox.zph(modelo_estrat)
 cox.zph(modelo_estrat) # GLOBAL:0.03
 
-# Edad factor
+# Edad dummies
 modelo_estrat <- coxph(Surv(dtime, death) ~
-                      as.factor(age_factor) + strata(chemo)+
+                      age_d1 + age_d2 + age_d3 + strata(chemo)+
+                      grade + size, ties = "breslow",
+                      data = datos2)
+# test2 <- cox.zph(modelo_estrat)
+cox.zph(modelo_estrat) # GLOBAL:0.087
+
+# modelo con scores
+modelo_estrat <- coxph(Surv(dtime, death) ~
+                      age_factor + strata(chemo)+
                       grade + size, ties = "breslow",
                       data = datos2)
 # test2 <- cox.zph(modelo_estrat)
@@ -506,21 +514,29 @@ cox.zph(modelo_estrat) # GLOBAL:0.087
 
 # == Modelo sin estratificar ==
 
-# Edad numerica
+# Edad numerica (modelo q teniamos)
+modelo_estrat <- coxph(Surv(dtime, death) ~
+                      age + chemo+
+                      grade + size, ties = "breslow",
+                      data = datos2)
+# test2 <- cox.zph(modelo_estrat)
+cox.zph(modelo_estrat) # GLOBAL:0.03
 
-modelo_sin_estrat <- coxph(Surv(dtime, death) ~
-                             age_factor + chemo + grade + size,
-                           ties = "breslow", data = datos2)
-# test2 <- cox.zph(modelo_sin_estrat)
-cox.zph(modelo_sin_estrat) # GLOBAL:0.01
+# Edad dummies
+modelo_estrat <- coxph(Surv(dtime, death) ~
+                      age_d1 + age_d2 + age_d3 + chemo+
+                      grade + size, ties = "breslow",
+                      data = datos2)
+# test2 <- cox.zph(modelo_estrat)
+cox.zph(modelo_estrat) # GLOBAL:0.046
 
-# Edad factor
-modelo_sin_estrat <- coxph(Surv(dtime, death) ~
-                             as.factor(age_factor) + chemo +
-                             grade + size, ties = "breslow",
-                           data = datos2)
-# test2 <- cox.zph(modelo_sin_estrat)
-cox.zph(modelo_sin_estrat) # GLOBAL:0.046 (pero todas las variables, incluida chemo dan significativas)
+# modelo con scores
+modelo_estrat <- coxph(Surv(dtime, death) ~
+                      age_factor + chemo+
+                      grade + size, ties = "breslow",
+                      data = datos2)
+# test2 <- cox.zph(modelo_estrat)
+cox.zph(modelo_estrat) # GLOBAL:0.01
 ```
 
 $$ \begin{array} {c|c}

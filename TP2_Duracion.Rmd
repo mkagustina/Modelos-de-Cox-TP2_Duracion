@@ -399,28 +399,30 @@ H_1)\quad &\text{El efecto de Edad NO es lineal}
 
 ```{r, include=FALSE}
 # Variable Edad
+
 datos2 <- datos %>% 
   mutate(
     age_d1 = ifelse(age >= 40 & age < 50, 1, 0),
-    age_d2 = ifelse(age >= 50 & age < 70, 1, 0),
-    age_d3 = ifelse(age >= 70, 1, 0)
+    age_d2 = ifelse(age >= 50 & age < 65, 1, 0),
+    age_d3 = ifelse(age >= 65, 1, 0)
   ) %>% 
   mutate(
     age_factor = case_when(
       age < 40 ~ 1,
       age >= 40 & age < 50 ~ 2,
-      age >= 50 & age < 70 ~ 3,
-      age >= 70 ~ 4
+      age >= 50 & age < 65 ~ 3,
+      age >= 65 ~ 4
     )
   )
 
-modelo3_edad_dummie <- coxph(Surv(dtime, death) ~ age_d1 + age_d2 + age_d3
-                             + chemo + grade + size, ties = "breslow",
-                             data = datos2)
+modelo3_edad_dummie <- coxph(Surv(dtime, death) ~ age_d1 +
+                            age_d2 + age_d3+ chemo + grade
+                            + size, ties = "breslow",
+                            data = datos2)
 
 modelo3_edad_factor <- coxph(Surv(dtime, death) ~ age_factor + chemo + grade + size, ties = "breslow", data = datos2)
 
-lrtest(modelo3_edad_factor, modelo3_edad_dummie) # Test no significativo
+lrtest(modelo3_edad_factor, modelo3_edad_dummie) # Test no significativo, variable LINEAL
 ```
 
 La probabilidad asociada es mayor al 5%, entonces la variable es lineal.
@@ -484,27 +486,39 @@ Para incluir las variables que son significativas pero no cumplen el supuesto de
 ```{r}
 # Modelos usando la mejor categorización para edad. Pruebo un modelo estratificando por chemo y otro sin estratificar
 
-datos_age_cat <- datos %>% 
-  mutate(
-    age_factor = case_when(
-      age < 40 ~ 1,
-      age >= 40 & age < 50 ~ 2,
-      age >= 50 & age < 65 ~ 3,
-      age >= 65 ~ 4
-    )
-  )
+# == Modelos estratificados ==
 
-# Modelo estratificado
-modelo_estrat <- coxph(Surv(dtime, death) ~ as.factor(age_factor) + 
-                      strata(chemo) + grade + size, ties = "breslow",
-                      data = datos_age_cat)
+# Edad numerica
+modelo_estrat <- coxph(Surv(dtime, death) ~
+                      age_factor + strata(chemo)+
+                      grade + size, ties = "breslow",
+                      data = datos2)
+# test2 <- cox.zph(modelo_estrat)
+cox.zph(modelo_estrat) # GLOBAL:0.03
+
+# Edad factor
+modelo_estrat <- coxph(Surv(dtime, death) ~
+                      as.factor(age_factor) + strata(chemo)+
+                      grade + size, ties = "breslow",
+                      data = datos2)
 # test2 <- cox.zph(modelo_estrat)
 cox.zph(modelo_estrat) # GLOBAL:0.087
 
-# Modelo sin estratificar
-modelo_sin_estrat <- coxph(Surv(dtime, death) ~ as.factor(age_factor) +
-                             chemo + grade + size, ties = "breslow",
-                       data = datos_age_cat)
+# == Modelo sin estratificar ==
+
+# Edad numerica
+
+modelo_sin_estrat <- coxph(Surv(dtime, death) ~
+                             age_factor + chemo + grade + size,
+                           ties = "breslow", data = datos2)
+# test2 <- cox.zph(modelo_sin_estrat)
+cox.zph(modelo_sin_estrat) # GLOBAL:0.01
+
+# Edad factor
+modelo_sin_estrat <- coxph(Surv(dtime, death) ~
+                             as.factor(age_factor) + chemo +
+                             grade + size, ties = "breslow",
+                           data = datos2)
 # test2 <- cox.zph(modelo_sin_estrat)
 cox.zph(modelo_sin_estrat) # GLOBAL:0.046 (pero todas las variables, incluida chemo dan significativas)
 ```

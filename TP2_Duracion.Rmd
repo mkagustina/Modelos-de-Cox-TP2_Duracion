@@ -484,7 +484,7 @@ Para incluir las variables que son significativas pero no cumplen el supuesto de
 - Plantear un modelo nuevo con la variable *Quimioterapia* estratificada.
 
 ```{r}
-# Modelos usando la mejor categorización para edad. Pruebo un modelo estratificando por chemo y otro sin estratificar
+# Modelos usando la mejor categorización para edad. Pruebo un modelo estratificando por chemo y otro sin estratificar para cada forma de incluir a la variable edad. En total son 6 modelos
 
 # == Modelos estratificados ==
 
@@ -548,6 +548,105 @@ $$ \begin{array} {c|c}
 \hline
 \text{Global} & 0.04 \\
 \end{array} $$
+
+```{r}
+# Efectivamente el problema está en las mujeres mayores. Voy a tratar de encontrar cuál es la edad exacta en la que se dejan de cumplir los supuestos del modelo.
+
+# --- Agrego un grupo más, uno entre 65 y 75 años ---
+
+datos_prueba <- datos %>% 
+  mutate(
+    age_d1 = ifelse(age >= 40 & age < 50, 1, 0),
+    age_d2 = ifelse(age >= 50 & age < 65, 1, 0),
+    age_d3 = ifelse(age >= 65 & age < 75, 1, 0),
+    age_d4 = ifelse(age >= 75, 1, 0)
+  ) 
+
+modelo_prueba <- coxph(Surv(dtime, death) ~ age_d1 + age_d2 +
+                         age_d3 + age_d4 + chemo + grade +
+                         size, ties = "breslow", 
+                         data = datos_prueba)
+
+# test2 <- cox.zph(modelo_prueba)
+cox.zph(modelo_prueba)
+
+# El problema está en las mujeres mayores de 75 años
+
+# --- Agrego un grupo más, uno entre 75 y 85 años ---
+
+datos_prueba <- datos %>% 
+  mutate(
+    age_d1 = ifelse(age >= 40 & age < 50, 1, 0),
+    age_d2 = ifelse(age >= 50 & age < 65, 1, 0),
+    age_d3 = ifelse(age >= 65 & age < 75, 1, 0),
+    age_d4 = ifelse(age >= 75 & age < 85, 1, 0),
+    age_d5 = ifelse(age >= 85, 1, 0)
+  ) 
+
+modelo_prueba <- coxph(Surv(dtime, death) ~ age_d1 + age_d2 +
+                         age_d3 + age_d4 + age_d5 + chemo +
+                         grade + size, ties = "breslow", 
+                         data = datos_prueba)
+
+# test2 <- cox.zph(modelo_prueba)
+cox.zph(modelo_prueba)
+
+# Las dummies 4 y 5 no dan. 
+
+# --- Vuelvo a probar con 4 dummies, pero hago la 3ra hasta 80 años ---
+
+datos_prueba <- datos %>% 
+  mutate(
+    age_d1 = ifelse(age >= 40 & age < 50, 1, 0),
+    age_d2 = ifelse(age >= 50 & age < 65, 1, 0),
+    age_d3 = ifelse(age >= 65 & age < 80, 1, 0),
+    age_d4 = ifelse(age >= 80, 1, 0)
+  ) 
+
+modelo_prueba <- coxph(Surv(dtime, death) ~ age_d1 + age_d2 +
+                         age_d3 + age_d4 + chemo +
+                         grade + size, ties = "breslow", 
+                         data = datos_prueba)
+
+# test2 <- cox.zph(modelo_prueba)
+cox.zph(modelo_prueba)
+# Las dummies 3 y 4 dan mal.
+
+# --- Hago la 3er dummie hasta 78 años ---
+
+datos_prueba <- datos %>% 
+  mutate(
+    age_d1 = ifelse(age >= 40 & age < 50, 1, 0),
+    age_d2 = ifelse(age >= 50 & age < 65, 1, 0),
+    age_d3 = ifelse(age >= 65 & age < 78, 1, 0),
+    age_d4 = ifelse(age >= 78, 1, 0)
+  ) 
+
+modelo_prueba <- coxph(Surv(dtime, death) ~ age_d1 + age_d2 +
+                         age_d3 + age_d4 + chemo +
+                         grade + size, ties = "breslow", 
+                         data = datos_prueba)
+
+# test2 <- cox.zph(modelo_prueba)
+cox.zph(modelo_prueba)
+# EL TOPE DE EDAD PARA EL CUAL SE CUMPLE EL SUPUESTO ES 78 AÑOS
+
+# Pruebo entonces de hacer un modelo con la edad continua, pero tomando sólo las mujeres hasta 78 años
+
+# sum(datos$age>78) = 29, esa es la cantidad de datos que perdemos.
+
+# Al final le pongo 65 años porque con menos no se cumple
+
+datos_sin_viejas <- datos %>% 
+  filter(age <= 65)
+
+modelo_sin_viejas <- coxph(Surv(dtime, death) ~ age + chemo + grade +
+                   size, ties = "breslow", 
+                 data = datos_sin_viejas)
+
+cox.zph(modelo_sin_viejas)
+
+```
 
 
 ```{r, fig.height=4}

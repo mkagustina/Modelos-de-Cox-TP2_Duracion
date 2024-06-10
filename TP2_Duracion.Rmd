@@ -484,169 +484,56 @@ Para incluir las variables que son significativas pero no cumplen el supuesto de
 - Plantear un modelo nuevo con la variable *Quimioterapia* estratificada.
 
 ```{r}
-# Modelos usando la mejor categorización para edad. Pruebo un modelo estratificando por chemo y otro sin estratificar para cada forma de incluir a la variable edad. En total son 6 modelos
+# Planteamos un modelo estratificando por quimioterapia y otro sin estratificar. En ambos se incorpora a Age a través de dummies.
 
-# == Modelos estratificados ==
+# -- Modelo estratificado --
 
-# Edad numerica
-modelo_estrat <- coxph(Surv(dtime, death) ~
-                      age + strata(chemo)+
-                      grade + size, ties = "breslow",
-                      data = datos2)
-# test2 <- cox.zph(modelo_estrat)
-cox.zph(modelo_estrat) # GLOBAL:0.03
-
-# Edad dummies
 modelo_estrat <- coxph(Surv(dtime, death) ~
                       age_d1 + age_d2 + age_d3 + strata(chemo)+
                       grade + size, ties = "breslow",
                       data = datos2)
-# test2 <- cox.zph(modelo_estrat)
-cox.zph(modelo_estrat) # GLOBAL:0.087
 
-# modelo con scores
-modelo_estrat <- coxph(Surv(dtime, death) ~
-                      age_factor + strata(chemo)+
-                      grade + size, ties = "breslow",
-                      data = datos2)
-# test2 <- cox.zph(modelo_estrat)
 cox.zph(modelo_estrat) # GLOBAL:0.087
 
 # == Modelo sin estratificar ==
 
-# Edad numerica (modelo q teniamos)
-modelo_estrat <- coxph(Surv(dtime, death) ~
-                      age + chemo+
-                      grade + size, ties = "breslow",
-                      data = datos2)
-# test2 <- cox.zph(modelo_estrat)
-cox.zph(modelo_estrat) # GLOBAL:0.03
-
 # Edad dummies
-modelo_estrat <- coxph(Surv(dtime, death) ~
-                      age_d1 + age_d2 + age_d3 + chemo+
+modelo4 <- coxph(Surv(dtime, death) ~
+                      age_d1 + age_d2 + age_d3 + chemo +
                       grade + size, ties = "breslow",
                       data = datos2)
-# test2 <- cox.zph(modelo_estrat)
-cox.zph(modelo_estrat) # GLOBAL:0.046
 
-# modelo con scores
-modelo_estrat <- coxph(Surv(dtime, death) ~
-                      age_factor + chemo+
-                      grade + size, ties = "breslow",
-                      data = datos2)
-# test2 <- cox.zph(modelo_estrat)
-cox.zph(modelo_estrat) # GLOBAL:0.01
+test2 <- cox.zph(modelo4)
+cox.zph(modelo4) # GLOBAL:0.046
+
 ```
 
 $$ \begin{array} {c|c}
 \text{Variable} & p\,\text{-value} \\
 \hline
-\text{Edad} & 0.07 \\
-\text{Grado} & 0.22 \\
-\text{Tamaño} & 0.15 \\
+\text{A}_1 & 0.540 \\
+\text{A}_2 & 0.500 \\
+\text{A}_3 & 0.063 \\
+\text{Grado} & 0.201 \\
+\text{Tamaño} & 0.123 \\
 \hline
-\text{Global} & 0.04 \\
+\text{Global} & 0.087 \\
+\end{array} 
+\qquad \qquad
+\begin{array} {c|c}
+\text{Variable} & p\,\text{-value} \\
+\hline
+\text{A}_1 & 0.208 \\
+\text{A}_2 & 0.592 \\
+\text{A}_3 & 0.014 \\
+\text{Grado} & 0.259 \\
+\text{Tamaño} & 0.117 \\
+\text{Quimioterapia} & 0.065 \\
+\hline
+\text{Global} & 0.046 \\
 \end{array} $$
 
-```{r}
-# Efectivamente el problema está en las mujeres mayores. Voy a tratar de encontrar cuál es la edad exacta en la que se dejan de cumplir los supuestos del modelo.
-
-# --- Agrego un grupo más, uno entre 65 y 75 años ---
-
-datos_prueba <- datos %>% 
-  mutate(
-    age_d1 = ifelse(age >= 40 & age < 50, 1, 0),
-    age_d2 = ifelse(age >= 50 & age < 65, 1, 0),
-    age_d3 = ifelse(age >= 65 & age < 75, 1, 0),
-    age_d4 = ifelse(age >= 75, 1, 0)
-  ) 
-
-modelo_prueba <- coxph(Surv(dtime, death) ~ age_d1 + age_d2 +
-                         age_d3 + age_d4 + chemo + grade +
-                         size, ties = "breslow", 
-                         data = datos_prueba)
-
-# test2 <- cox.zph(modelo_prueba)
-cox.zph(modelo_prueba)
-
-# El problema está en las mujeres mayores de 75 años
-
-# --- Agrego un grupo más, uno entre 75 y 85 años ---
-
-datos_prueba <- datos %>% 
-  mutate(
-    age_d1 = ifelse(age >= 40 & age < 50, 1, 0),
-    age_d2 = ifelse(age >= 50 & age < 65, 1, 0),
-    age_d3 = ifelse(age >= 65 & age < 75, 1, 0),
-    age_d4 = ifelse(age >= 75 & age < 85, 1, 0),
-    age_d5 = ifelse(age >= 85, 1, 0)
-  ) 
-
-modelo_prueba <- coxph(Surv(dtime, death) ~ age_d1 + age_d2 +
-                         age_d3 + age_d4 + age_d5 + chemo +
-                         grade + size, ties = "breslow", 
-                         data = datos_prueba)
-
-# test2 <- cox.zph(modelo_prueba)
-cox.zph(modelo_prueba)
-
-# Las dummies 4 y 5 no dan. 
-
-# --- Vuelvo a probar con 4 dummies, pero hago la 3ra hasta 80 años ---
-
-datos_prueba <- datos %>% 
-  mutate(
-    age_d1 = ifelse(age >= 40 & age < 50, 1, 0),
-    age_d2 = ifelse(age >= 50 & age < 65, 1, 0),
-    age_d3 = ifelse(age >= 65 & age < 80, 1, 0),
-    age_d4 = ifelse(age >= 80, 1, 0)
-  ) 
-
-modelo_prueba <- coxph(Surv(dtime, death) ~ age_d1 + age_d2 +
-                         age_d3 + age_d4 + chemo +
-                         grade + size, ties = "breslow", 
-                         data = datos_prueba)
-
-# test2 <- cox.zph(modelo_prueba)
-cox.zph(modelo_prueba)
-# Las dummies 3 y 4 dan mal.
-
-# --- Hago la 3er dummie hasta 78 años ---
-
-datos_prueba <- datos %>% 
-  mutate(
-    age_d1 = ifelse(age >= 40 & age < 50, 1, 0),
-    age_d2 = ifelse(age >= 50 & age < 65, 1, 0),
-    age_d3 = ifelse(age >= 65 & age < 78, 1, 0),
-    age_d4 = ifelse(age >= 78, 1, 0)
-  ) 
-
-modelo_prueba <- coxph(Surv(dtime, death) ~ age_d1 + age_d2 +
-                         age_d3 + age_d4 + chemo +
-                         grade + size, ties = "breslow", 
-                         data = datos_prueba)
-
-# test2 <- cox.zph(modelo_prueba)
-cox.zph(modelo_prueba)
-# EL TOPE DE EDAD PARA EL CUAL SE CUMPLE EL SUPUESTO ES 78 AÑOS
-
-# Pruebo entonces de hacer un modelo con la edad continua, pero tomando sólo las mujeres hasta 78 años
-
-# sum(datos$age>78) = 29, esa es la cantidad de datos que perdemos.
-
-# Al final le pongo 65 años porque con menos no se cumple
-
-datos_sin_viejas <- datos %>% 
-  filter(age <= 65)
-
-modelo_sin_viejas <- coxph(Surv(dtime, death) ~ age + chemo + grade +
-                   size, ties = "breslow", 
-                 data = datos_sin_viejas)
-
-cox.zph(modelo_sin_viejas)
-
-```
+Si bien con un nivel de significación del 5% el solo el modelo estratificado cumple el supuesto de hazards proporcionales (Tabla x), el p-value asociado al test sin estratificar es muy cercano a 0.05 y ese modelo nos da la posibilidad de estimar un parámetro para la Quimioterapia, que es una variable importante para el problema. Por lo tanto, decidimos quedarnos con ese modelo. De esta forma, el modelo final resulta:
 
 
 ```{r, fig.height=4}
@@ -676,12 +563,11 @@ Se concluye entonces que el supuesto de hazards proporcionales se satisface para
 
 - Edad (categorizada)
 
-- Quimioterapia (variable de estratificación del modelo)
+- Quimioterapia.
 
-- Grado de diferenciación.
+- Grado de diferenciación tumoral.
 
 - Tamaño del tumor.
 
-Por lo que el modelo final estimado resulta ser $$\hat{h_i} (t) = \hat{h_0} (t) \cdot exp(-0.05 \cdot A_{1i} + 0.47 \cdot A_{2i} + 1 \cdot A_{3i} + 0.31 \cdot G_{2i} + 0.38 \cdot S_{1i} + 0.81 \cdot S_{2i})$$ para *Quimioterapia* = 0 y 
-$$\hat{h_i} (t) = \hat{h_0} (t) \cdot exp(0.95 \cdot A_{1i} + 1.6 \cdot A_{2i} + 2.73 \cdot A_{3i} + 1.36 \cdot G_{2i} + 1.46 \cdot S_{1i} + 2.25 \cdot S_{2i})$$ para *Quimioterapia* = 1.
+Por lo que el modelo final estimado resulta ser $$\hat{h_i} (t) = \hat{h_0} (t) \cdot exp(-0.05 \cdot A_{1i} + 0.5 \cdot A_{2i} + 0.77 \cdot A_{3i} + 0.35 \cdot \text{chemo}_i + 0.31 \cdot G_{2i} + 0.38 \cdot S_{1i} + 0.84 \cdot S_{2i})$$
 

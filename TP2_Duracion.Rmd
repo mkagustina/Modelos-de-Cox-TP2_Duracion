@@ -40,7 +40,7 @@ Los datos fueron obtenidos de la base *rotterdam* del paquete *survival* de R. L
 -   **Chemo**: variable indicadora de haber recibido quimioterapia.
 -   **Pgr**: receptores de progesterona (en fmol/l).
 -   **Er**: receptores de estrógeno (en fmol/l).
--   **Grade**: grado de diferenciación del tumor, con valores de 1 a 3.
+-   **Grade**: grado de diferenciación del tumor, con valores 2 o 3.
 -   **Size**: tamaño del tumor, con niveles: menos de 20mm, entre 20 y 50mm, 50mm.
 
 De la totalidad de mujeres en estudio, se cuenta con el tiempo exacto hasta la muerte de 377 de ellas y 206 censuras.
@@ -145,15 +145,15 @@ lrtest(modelo_nulo, modelo_size) #Test significativo
 ```
 
 En primer lugar se compara, para cada variable, su modelo univariado contra un modelo sin covariables.
-Previo a esto, se definen 2 *dummies* referentes a la variable *Tamaño* y otras 2 para la variable *Grado*:
+Previo a esto, se definen 2 *dummies* referentes a la variable *Tamaño* y 1 para la variable *Grado*:
 
 \[
-\begin{array}{ccc|ccc}
-\text{size} & S_1 & S_2 & \text{grade} & G_1 & G_2 \\
+\begin{array}{ccc|cc}
+\text{size} & S_1 & S_2 & \text{grade} & G\\
 \hline
-< 20 & 0 & 0 & 1 & 0 & 0 \\
-20\text{-}50 & 1 & 0 & 2 & 1 & 0 \\
-> 50 & 0 & 1 & 3 & 0 & 1 \\
+< 20 & 0 & 0 & 2 & 0\\
+20\text{-}50 & 1 & 0 & 3 & 1\\
+> 50 & 0 & 1\\
 \end{array}
 \]
 
@@ -193,51 +193,50 @@ Para cada variable, se compara un modelo aditivo que contenga todas las variable
 - Modelo aditivo: 
 
 $$
-h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{age}_i + \beta_2 \cdot \text{meno}_i + \beta_3 \cdot \text{er}_i + \beta_4 \cdot G_{1i} + \beta_5 \cdot G_{2i} + \beta_6 \cdot S_{1i} + \beta_7 \cdot S_{2i})
+h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{age}_i + \beta_2 \cdot \text{meno}_i + \beta_3 \cdot \text{er}_i + \beta_4 \cdot G_i + \beta_5 \cdot S_{1i} + \beta_6 \cdot S_{2i})
 $$
 
 - Modelos de comparación:
 
 1) Sin la variable *Edad*: 
 
-$$h_i(t) = h_0(t) \cdot \exp(\beta_2 \cdot \text{meno}_i + \beta_3 \cdot \text{er}_i + \beta_4 \cdot G_{1i} + \beta_5 \cdot G_{2i} + \beta_6 \cdot S_{1i} + \beta_7 \cdot S_{2i})$$
+$$h_i(t) = h_0(t) \cdot \exp(\beta_2 \cdot \text{meno}_i + \beta_3 \cdot \text{er}_i + \beta_4 \cdot G_i + \beta_5 \cdot S_{1i} + \beta_6 \cdot S_{2i})$$
 
 2) Sin la variable *Menopausia*: 
 
-$$h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{age}_i + \beta_3 \cdot \text{er}_i + \beta_4 \cdot G_{1i} + \beta_5 \cdot G_{2i} + \beta_6 \cdot S_{1i} + \beta_7 \cdot S_{2i})$$
+$$h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{age}_i + \beta_3 \cdot \text{er}_i + \beta_4 \cdot G_i + \beta_5 \cdot S_{1i} + \beta_6 \cdot S_{2i})$$
 
 3) Sin la variable *Receptores de estrógeno*: 
 
-$$h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{age}_i + \beta_2 \cdot \text{meno}_i + \beta_4 \cdot G_{1i} + \beta_5 \cdot G_{2i} + \beta_6 \cdot S_{1i} + \beta_7 \cdot S_{2i})$$
+$$h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{age}_i + \beta_2 \cdot \text{meno}_i + \beta_4 \cdot G_i + \beta_5 \cdot S_{1i} + \beta_6 \cdot S_{2i})$$
 
 4) Sin la variable *Grado de diferenciación del tumor*: 
 
-$$h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{age}_i + \beta_2 \cdot \text{meno}_i + \beta_3 \cdot \text{er}_i + \beta_6 \cdot S_{1i} + \beta_7 \cdot S_{2i})$$
+$$h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{age}_i + \beta_2 \cdot \text{meno}_i + \beta_3 \cdot \text{er}_i + \beta_5 \cdot S_{1i} + \beta_6 \cdot S_{2i})$$
 
 5) Sin la variable *Tamaño del tumor*: 
 
-$$h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{age}_i + \beta_2 \cdot \text{meno}_i + \beta_3 \cdot \text{er}_i + \beta_4 \cdot G_{1i} + \beta_5 \cdot G_{2i})$$
+$$h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{age}_i + \beta_2 \cdot \text{meno}_i + \beta_3 \cdot \text{er}_i + \beta_4 \cdot G_i)$$
 
 \underline{Hipótesis}: las hipótesis del test se dividen en 2 casos:
 
-- Caso 1): la $j-$ésima variable tiene un solo $\beta_j$ asociado a ella
+- Caso 1) las primeras 4 variables tienen 1 solo coeficiente asociado en el modelo:
 
 \begin{align*}
 \begin{cases}
 H_0) \quad &\beta_j = 0 \\
-&\qquad \qquad \quad \text{con} \; j = \overline{1,3} \\
+&\qquad \qquad \quad \text{con} \; j = \overline{1,4} \\
 H_1) \quad &\beta_j \neq 0
 \end{cases}
 \end{align*}
 
 
-- Caso 2): la $j-$ésima variable tiene más de un $\beta_j$ asociado a ella
+- Caso 2) el tamaño del tumor tiene 2 coeficientes en el modelo, entonces:
 
 \begin{align*}
 \begin{cases}
-H_0) &\, \beta_j = \beta_{j'} = 0 \\
-&\qquad\qquad \qquad \qquad \qquad \text{con} \; (j, j') = \text{(4, 5) o (6, 7)} \\
-H_1) &\, \text{Al menos un} \quad \beta_j \neq 0
+H_0) &\, \beta_5 = \beta_{6} = 0 \\
+H_1) &\, \text{Al menos un} \quad \beta_j \neq 0, \quad \text{con} \; j = \overline{5,6}
 \end{cases}
 \end{align*}
 
@@ -294,7 +293,7 @@ $$
 \end {array}
 $$
 
-El modelo que se obtendría sería $h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{age}_i + \beta_2 \cdot G_{1i} + \beta_3 \cdot G_{2i} + \beta_4 \cdot S_{1i} + \beta_5 \cdot S_{2i})$. Sin embargo, este no es el modelo final dado que falta evaluar si ahora, con otras variables en el modelo, aquellas que no resultaron significativas de manera univariada lo son.
+El modelo que se obtendría sería $h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{age}_i + \beta_2 \cdot G_i + \beta_3 \cdot S_{1i} + \beta_4 \cdot S_{2i})$. Sin embargo, este no es el modelo final dado que falta evaluar si ahora, con otras variables en el modelo, aquellas que no resultaron significativas de manera univariada lo son.
 
 ```{r, include=FALSE}
 # Modelo con las variables significativas hasta el momento
@@ -337,11 +336,12 @@ $$ \begin{array} {c|c|c}
 \text{Receptores de progesterona} & 0.3811 & \text{No rechazo H}_0 \\
 \end{array} $$
 
-De esta manera, el modelo sería $h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{age}_i + \beta_2 \cdot \text{chemo}_i + \beta_3 \cdot G_{1i} + \beta_4 \cdot G_{2i} + \beta_5 \cdot S_{1i} + \beta_6 \cdot S_{2i})$
+De esta manera, el modelo sería $h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{age}_i + \beta_2 \cdot \text{chemo}_i + \beta_3 \cdot G_i + \beta_4 \cdot S_{1i} + \beta_5 \cdot S_{2i})$
 
 Una vez definido, se prueban las distintas interacciones dobles entre las variables y resulta que ninguna es significativa. Por lo que no se altera el modelo.
 
-```{r, include=FALSE}
+```{r, eval=FALSE}
+# === Prueba de significancia de las interacciones dobles ===
 
 #Interaccion Edad-Quimioterapia
 modelo_int1 <- coxph(Surv(dtime, death) ~ age + chemo +  grade + size + age*chemo,
@@ -386,7 +386,6 @@ lrtest(modelo3, modelo_int6) #Test no significativo
 
 ```
 
-
 ## Linealidad
 
 Cuando se tienen variables de tipo continua debe analizarse en qué forma se las incluye en el modelo y hay dos opciones para ello: lineal y no lineal; esta última contempla tanto la idea de categorizar la variable como la de trabajar con una función de ella (logaritmo, al cuadrado, etc).
@@ -428,7 +427,7 @@ lrtest(modelo3_edad_factor, modelo3_edad_dummie) # Test no significativo, variab
 La probabilidad asociada es mayor al 5%, entonces la variable es lineal.
 Con este resultado, se concluye que el modelo definitivo es el presentado con anterioridad:
 $$
-h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{age}_i + \beta_2 \cdot \text{chemo}_i + \beta_3 \cdot G_{1i} + \beta_4 \cdot G_{2i} + \beta_5 \cdot S_{1i} + \beta_6 \cdot S_{2i})
+h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{age}_i + \beta_2 \cdot \text{chemo}_i + \beta_3 \cdot G_i + \beta_4 \cdot S_{1i} + \beta_5 \cdot S_{2i})
 $$
 
 ## Comprobación de supuestos
@@ -483,7 +482,7 @@ Para incluir las variables que son significativas pero no cumplen el supuesto de
 
 - Plantear un modelo nuevo con la variable *Quimioterapia* estratificada.
 
-```{r}
+```{r, results='hide'}
 # Planteamos un modelo estratificando por quimioterapia y otro sin estratificar. En ambos se incorpora a Age a través de dummies.
 
 # -- Modelo estratificado --
@@ -516,6 +515,7 @@ $$ \begin{array} {c|c}
 \text{A}_3 & 0.063 \\
 \text{Grado} & 0.201 \\
 \text{Tamaño} & 0.123 \\
+& \\
 \hline
 \text{Global} & 0.087 \\
 \end{array} 
@@ -533,35 +533,9 @@ $$ \begin{array} {c|c}
 \text{Global} & 0.046 \\
 \end{array} $$
 
-Si bien con un nivel de significación del 5% el solo el modelo estratificado cumple el supuesto de hazards proporcionales (Tabla x), el p-value asociado al test sin estratificar es muy cercano a 0.05 y ese modelo nos da la posibilidad de estimar un parámetro para la Quimioterapia, que es una variable importante para el problema. Por lo tanto, decidimos quedarnos con ese modelo. De esta forma, el modelo final resulta:
+Si bien con un nivel de significación del 5% el solo el modelo estratificado cumple el supuesto de hazards proporcionales (Tabla x), el p-value asociado al test sin estratificar es muy cercano a 0.05 y ese modelo nos da la posibilidad de estimar un parámetro para la Quimioterapia, que es una variable importante para el problema. Por lo tanto, decidimos quedarnos con ese modelo. De esta forma, el modelo final contiene las siguientes variables:
 
-
-```{r, fig.height=4}
-#Convertimos la información de "test2" en datos que puedan usarse en ggplot()
-time <- test2$time
-residuals <- as.data.frame(test2$y)
-variables <- c("Edad", "Grado", "Tamaño")
-
-data <- data.frame(
-  time = rep(time, ncol(residuals)),
-  residuals =as.vector(as.matrix(residuals)),
-  variable = rep(variables, each = length(time))
-)
-
-#Gráfico de residuos
-ggplot(data = data, aes(x = time, y = residuals)) +
-  geom_point(pch = 21, color = "black") +
-  geom_smooth(method = "loess", se = F, color = "steelblue2") +
-  facet_wrap(~variable, scales = "free_y")+
-  labs(x = "Tiempo", y = "Residuos", caption = "Gráfico 2: Evaluación de la proporcionalidad") +
-  theme_bw() +
-  theme(plot.caption = element_text(hjust = 0.5))
-```
-Se puede observar que si bien el test global es significativo, las probabilidades asociadas a cada variable no lo son y gráficamente parece que el supuesto se cumple. 
-
-Se concluye entonces que el supuesto de hazards proporcionales se satisface para las siguientes variables significativas: 
-
-- Edad (categorizada)
+- Edad (categorizada).
 
 - Quimioterapia.
 
@@ -569,5 +543,19 @@ Se concluye entonces que el supuesto de hazards proporcionales se satisface para
 
 - Tamaño del tumor.
 
-Por lo que el modelo final estimado resulta ser $$\hat{h_i} (t) = \hat{h_0} (t) \cdot exp(-0.05 \cdot A_{1i} + 0.5 \cdot A_{2i} + 0.77 \cdot A_{3i} + 0.35 \cdot \text{chemo}_i + 0.31 \cdot G_{2i} + 0.38 \cdot S_{1i} + 0.84 \cdot S_{2i})$$
+Por lo que el modelo estimado resulta ser $$\hat{h_i} (t) = \hat{h_0} (t) \cdot exp(-0.05 \cdot A_{1i} + 0.5 \cdot A_{2i} + 0.77 \cdot A_{3i} + 0.35 \cdot \text{chemo}_i + 0.31 \cdot G_i + 0.38 \cdot S_{1i} + 0.84 \cdot S_{2i})$$
+
+## Interpretación del modelo
+
+### Coeficientes
+
+Con solo mirar los coeficientes del modelo se puede concluir:
+
+- El perfil de paciente femenino con mejor prónostico al realizar la cirugía primaria de extracción del tumor mamario es: mujer entre 40 y 50 años de edad, que no recibió quimioterapia y que posee un tumor de grado 2 con menos de 20cm de diámetro.
+
+- El perfil de paciente femenino con el peor pronóstico es: mujer mayor a 65 años de edad, que recibió quimioterapia y posee un tumor de grado 3 con más de 50cm de diámetro.
+
+### Razones de hazards
+
+Otra forma de interpretar el modelo es obteniendo razones de hazards, y sus respectivos intervalos de confianza, para distintos valores de nuestras variables
 

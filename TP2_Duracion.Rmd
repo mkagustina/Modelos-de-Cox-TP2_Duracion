@@ -154,6 +154,7 @@ Previo a esto, se definen 2 *dummies* referentes a la variable *Tamaño* y 1 par
 < 20 & 0 & 0 & 2 & 0\\
 20\text{-}50 & 1 & 0 & 3 & 1\\
 > 50 & 0 & 1\\
+
 \end{array}
 \]
 
@@ -389,7 +390,8 @@ lrtest(modelo3, modelo_int6) #Test no significativo
 ## Linealidad
 
 Cuando se tienen variables de tipo continua debe analizarse en qué forma se las incluye en el modelo y hay dos opciones para ello: lineal y no lineal; esta última contempla tanto la idea de categorizar la variable como la de trabajar con una función de ella (logaritmo, al cuadrado, etc).
-Las hipótesis que se plantean son:
+
+En este caso, la única variable continua que se tiene es *Edad*. Por lo que, las hipótesis que se plantean son:
 
 \begin{align*}
 H_0)\quad &\text{El efecto de Edad es lineal} \\
@@ -433,7 +435,7 @@ $$
 ## Comprobación de supuestos
 
 Como es sabido, todo el trabajo realizado se desarrolló suponiendo que los hazards son proporcionales pero ¿Se cumple esto?
-Se comprabará mediante el uso de los residuos de Schoenfeld obtenidos para cada variable.
+Se comprabará mediante los residuos de Schoenfeld obtenidos para cada variable y el test de Grambsch y Therneau.
 
 ```{r}
 #H_0)Los hazards son proporcionales
@@ -472,13 +474,13 @@ ggplot(data = data, aes(x = time, y = residuals)) +
   theme(plot.caption = element_text(hjust = 0.5))
 ```
 
-La función `cox.zph()`, de manera global, dice que el supuesto no es cierto ya que se rechaza la hipótesis nula. Además, brinda información acerca de qué variables no estarían cumpliendo la proporcionalidad de los hazards: *Edad* y *Quimioterapia*. Esto puede constatarse también de forma gráfica al ver que los residuos de *Quimioterapia* no están divididos en dos grupos (cantidad de categorías que tiene), lo que sí sucede con *Grado* y *Tamaño*. 
+Los resultados del test (Tabla x), de manera global, dicen que el supuesto no es cierto ya que se rechaza la hipótesis nula. Además, brindan información acerca de cuáles variables no estarían cumpliendo la proporcionalidad de los hazards: *Edad* y *Quimioterapia*. Esto puede constatarse también de forma gráfica (Gráfico 1)al ver que los residuos de *Quimioterapia* no están divididos en dos grupos (cantidad de categorías que tiene), lo que sí sucede con *Grado* y *Tamaño*. 
 
 De la variable *Edad*, por ser continua, se debería observar un patrón aleatorio, pero se observa que los puntos están menos dispersos al avanzar el tiempo.
 
 Para incluir las variables que son significativas pero no cumplen el supuesto de proporcionalidad, se decide lo siguiente:
 
-- Categorizar la variable *Edad* con valores del 1 al 4.
+- Categorizar la variable *Edad* en 4 categorías: Menores de 40 años, Entre 40 y 50 años, Entre 50 y 65 años y Mayores de 65 años.
 
 - Plantear un modelo nuevo con la variable *Quimioterapia* estratificada.
 
@@ -533,7 +535,7 @@ $$ \begin{array} {c|c}
 \text{Global} & 0.046 \\
 \end{array} $$
 
-Si bien con un nivel de significación del 5% el solo el modelo estratificado cumple el supuesto de hazards proporcionales (Tabla x), el p-value asociado al test sin estratificar es muy cercano a 0.05 y ese modelo nos da la posibilidad de estimar un parámetro para la Quimioterapia, que es una variable importante para el problema. Por lo tanto, decidimos quedarnos con ese modelo. De esta forma, el modelo final contiene las siguientes variables:
+Si bien con un nivel de significación del 5% el modelo estratificado cumple el supuesto de hazards proporcionales (Tabla x), la probabilidad asociada al test sin estratificar es muy cercano a 0.05 y ese modelo brinda la posibilidad de estimar un parámetro para *Quimioterapia*, que es una variable importante para el problema. Por lo tanto, se decide  con ese modelo. De esta forma, el modelo final contiene las siguientes variables:
 
 - Edad (categorizada).
 
@@ -557,5 +559,25 @@ Con solo mirar los coeficientes del modelo se puede concluir:
 
 ### Razones de hazards
 
-Otra forma de interpretar el modelo es obteniendo razones de hazards, y sus respectivos intervalos de confianza, para distintos valores de nuestras variables
+Otra forma de interpretar el modelo es obteniendo razones de hazards, y sus respectivos intervalos de confianza, para distintos valores de las variables. 
 
+
+#### Grado y Tamaño: 
+Es sabido que un mayor grado de diferenciciación más rápida es la dispersión del cancer, por lo que se calcula la razón de hazard para el grado de diferenciación 3 y comparando, por un lado, el tamaño del tumor menor a 20 mm contra el tamaño entre 20 y 50 mm; por otro, el tamaño del tumor menora 20 mm contra el tamaño mayor a 50 mm.
+
+$$\circ \; \hat{RH}_{(<20 \; \text{vs} \; 20\text{-}50)} = \frac{\hat{h_0} (t) \cdot exp(-0.05 \cdot A_{1i} + 0.5 \cdot A_{2i} + 0.77 \cdot A_{3i} + 0.35 \cdot \text{chemo}_i + 0.31 \cdot 1 + 0.38 \cdot 1 + 0.84 \cdot 0)}{\hat{h_0} (t) \cdot exp(-0.05 \cdot A_{1i} + 0.5 \cdot A_{2i} + 0.77 \cdot A_{3i} + 0.35 \cdot \text{chemo}_i + 0.31 \cdot 1 + 0.38 \cdot 0 + 0.84 \cdot 0)} \Longrightarrow $$
+
+$$ \Longrightarrow \hat{RH}_{(<20 \; \text{vs} \; 20\text{-}50)} = exp(0.38) = 1.46 $$
+$$ \circ \; IC_{RH} = e^{[\hat{\beta}_6 \; \pm \; Z_{1-\frac{\alpha}{2}} \cdot \hat{SE}(\hat{\beta}_6) ]} = (e^{0.149};e^{0.611}) = (1.161; 1.842)$$
+
+
+$$\circ \; \hat{RH}_{(<20 \; \text{vs} \; >50)} = \frac{\hat{h_0} (t) \cdot exp(-0.05 \cdot A_{1i} + 0.5 \cdot A_{2i} + 0.77 \cdot A_{3i} + 0.35 \cdot \text{chemo}_i + 0.31 \cdot 1 + 0.38 \cdot 0 + 0.84 \cdot 1)}{\hat{h_0} (t) \cdot exp(-0.05 \cdot A_{1i} + 0.5 \cdot A_{2i} + 0.77 \cdot A_{3i} + 0.35 \cdot \text{chemo}_i + 0.31 \cdot 1 + 0.38 \cdot 0 + 0.84 \cdot 0)} \Longrightarrow $$
+$$ \Longrightarrow \hat{RH}_{(<20 \; \text{vs} \; >50)} = exp(0.84) = 2.32 $$
+
+$$ \circ \; IC_{RH} = e^{[\hat{\beta}_7 \; \pm \; Z_{1-\frac{\alpha}{2}} \cdot \hat{SE}(\hat{\beta}_7) ]} = (e^{0.526};e^{1.154}) = (1.692; 3.171)$$
+
+Por lo que el riesgo de tener cáncer de mama en pacientes con grado 3 de diferenciación y un tumor entre 20 y 50 mm es como minimo un 16.1% mayor y como máximo un 84.2% mayor que ese mismo riesgo para aquellas pacientes con grado 3 de diferenciación y un tumor de menos de 20 mm. Mientras que el riesgo de tener cáncer de mama para pacientes con grado 3 de diferenciación y un tumor de más de 50 mm es, como mínimo, un 69.2% mayor y, como máximo, un 217% mayor que ese mismo riesgo para aquellas pacientes también con grado 3 pero con un tumor de menos de 20mm.
+
+
+#### Tamaño y Quimioterapia: 
+Muchas veces, la quimioterapia no da resultados; esto no necesariamente se da porque se la haya aplicado tarde, si no porque, quizás, el tamaño del tumor a tratar era demasiado pequeño

@@ -147,16 +147,15 @@ lrtest(modelo_nulo, modelo_size) #Test significativo
 En primer lugar se compara, para cada variable, su modelo univariado contra un modelo sin covariables.
 Previo a esto, se definen 2 *dummies* referentes a la variable *Tamaño* y 1 para la variable *Grado*:
 
-\[
+$$
 \begin{array}{ccc|cc}
 \text{size} & S_1 & S_2 & \text{grade} & G\\
 \hline
 < 20 & 0 & 0 & 2 & 0\\
 20\text{-}50 & 1 & 0 & 3 & 1\\
-> 50 & 0 & 1\\
-
+> 50 & 0 & 1 & & 
 \end{array}
-\]
+$$
 
 Las hipótesis en contraste son:
 
@@ -184,6 +183,11 @@ $$
 \text{Tamaño} & \sim 0 & \text{Rechazo H}_0
 \end{array}
 $$
+
+\vspace{-0.5cm}
+\begin{center}
+\footnotesize{\textit{Tabla 1: resultados de test de hipótesis para modelos univariados}}
+\end{center}
 
 Se determina entonces que las variables significativas en esta etapa de la selección de variables son: Edad, Menopausia, Receptores de estrógeno, Grado de diferenciación y Tamaño del tumor. 
 
@@ -294,6 +298,11 @@ $$
 \end {array}
 $$
 
+\vspace{-0.5cm}
+\begin{center}
+\footnotesize{\textit{Tabla 2: resultados de test de hipótesis para .....}}
+\end{center}
+
 El modelo que se obtendría sería $h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{age}_i + \beta_2 \cdot G_i + \beta_3 \cdot S_{1i} + \beta_4 \cdot S_{2i})$. Sin embargo, este no es el modelo final dado que falta evaluar si ahora, con otras variables en el modelo, aquellas que no resultaron significativas de manera univariada lo son.
 
 ```{r, include=FALSE}
@@ -336,6 +345,11 @@ $$ \begin{array} {c|c|c}
 \text{Quimioterapia} & 0.0209 & \text{Rechazo H}_0 \\
 \text{Receptores de progesterona} & 0.3811 & \text{No rechazo H}_0 \\
 \end{array} $$
+
+\vspace{-0.5cm}
+\begin{center}
+\footnotesize{\textit{Tabla 3: resultados de test de hipótesis para .....}}
+\end{center}
 
 De esta manera, el modelo sería $h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{age}_i + \beta_2 \cdot \text{chemo}_i + \beta_3 \cdot G_i + \beta_4 \cdot S_{1i} + \beta_5 \cdot S_{2i})$
 
@@ -452,6 +466,11 @@ $$ \begin{array} {c|c}
 \text{Global} & 0.0004 \\
 \end{array} $$
 
+\vspace{-0.5cm}
+\begin{center}
+\footnotesize{\textit{Tabla 4: resultados de test de hipótesis para .....}}
+\end{center}
+
 ```{r}
 #Convertimos la información de "test" en datos que puedan usarse en ggplot()
 time <- test$time
@@ -534,6 +553,11 @@ $$ \begin{array} {c|c}
 \hline
 \text{Global} & 0.046 \\
 \end{array} $$
+
+\vspace{-0.5cm}
+\begin{center}
+\footnotesize{\textit{Tabla 5: resultados de test de hipótesis para .....}}
+\end{center}
 
 Si bien con un nivel de significación del 5% el modelo estratificado cumple el supuesto de hazards proporcionales (Tabla x), la probabilidad asociada al test sin estratificar es muy cercano a 0.05 y ese modelo brinda la posibilidad de estimar un parámetro para *Quimioterapia*, que es una variable importante para el problema. Por lo tanto, se decide  con ese modelo. De esta forma, el modelo final contiene las siguientes variables:
 

@@ -2,16 +2,16 @@
 title: |
   \vspace{1cm}
   \begin{tabular}{c}
-  {\normalsize\textbf{UNIVERSIDAD NACIONAL DE ROSARIO}}\\
+  {\normalsize\textbf{UNIVERSIDAD NACIONAL DE ROSARIO}} \\
   {\Large Facultad de Ciencias Económicas y Estadística}\\
   \\
   \includegraphics[width=5cm]{LogoUNR.png}\\
   \vspace{1cm}
    \\
   {\huge\textbf{Análisis de datos de duración}} \\
-  {\huge\textbf{en pacientes con cáncer de mama}}\\
+  {\huge\textbf{en pacientes con cáncer de mama}} \\
   \\
-  {\Large Rotterdam tumor bank - 1978-1985}\\
+  {\Large Rotterdam tumor bank - 1978-1985}
   \end{tabular}
   \vspace{5cm}
 author: |
@@ -591,23 +591,31 @@ Es sabido que un mayor grado de diferenciciación más rápida es la dispersión
 Muchas veces, la quimioterapia no da resultados; esto no necesariamente se da porque se la haya aplicado tarde, si no porque, quizás, el tamaño del tumor a tratar era demasiado pequeño.
 
 #### 3) Edad: 
-Resulta de interés ver el riesgo para mujeres que fueron expuestas a la quimioterapia, poseen grado 3 de diferenciación y su tumor es de más de 50mm, en especifico para dos grupos etarios: las menores de 40 años y aquellas entre 50 y 65 años.
+Resulta de interés comparar las funciones hazards de mujeres que fueron expuestas a la quimioterapia, poseen grado 3 de diferenciación y su tumor es de más de 50mm, en especifico para dos grupos etarios: las menores de 40 años y aquellas entre 50 y 65 años.
 
 
-$$ \begin{array} {m{2cm} | m{2cm}  m{2cm}}
+$$ \begin{array} {c|cc}
 \hat{RH} & \text{Estimación} & \text{Intervalo} \\
 \hline
+\\
 G=3; \; T = \leq 20 \; \text{vs} \; 20\text{-}50 & 1.46 & (1.161; 1.842) \\
+\\
 G=3; \; T = \leq 20 \; \text{vs} \; >50 & 2.32 & (1.692; 3.171) \\
+\\
 Q=Si, \; T= \leq 20; \; \text{vs} \; Q=No, \; T= \; >50 & 1.63 & (1.034; 2.578) \\
+\\
 Q=No, \; T= \leq 20; \; \text{vs} \; Q=Si, \; T= \; >50 & 3.29 & (2.140;5.048) \\
-Q=Si; \; G=3; \; T=>50 \; E=<40 \; \text{vs} \; \geq50 \;\text{-}<65 & 1.65 & (1.092;2.488) \\
+\\
+Q=Si; \; G=3; \; T=>50; \; E=<40 \; \text{vs} \; \geq50 \;\text{-}<65 & 1.65 & (1.092;2.488) \\
 \end{array}$$
 
+#### 1) 
+La tasa de mortalidad de pacientes con grado 3 de diferenciación y un tumor entre 20 y 50 mm es, como minimo, un 16.1% mayor y, como máximo, un 84.2% mayor que esa misma tasa de pacientes con grado 3 de diferenciación y un tumor de 20 mm o menos. Mientras que la tasa de mortalidad de pacientes con grado 3 de diferenciación y un tumor de más de 50 mm es, como mínimo, un 69.2% mayor y, como máximo, un 217% mayor que esa misma tasa de pacientes también con grado 3 pero con un tumor de 20mm o menos; para valores fijos de las variables restantes.
 
-1) El riesgo de tener cáncer de mama en pacientes con grado 3 de diferenciación y un tumor entre 20 y 50 mm es, como minimo, un 16.1% mayor y, como máximo, un 84.2% mayor que ese mismo riesgo para aquellas pacientes con grado 3 de diferenciación y un tumor de 20 mm o menos. Mientras que el riesgo de tener cáncer de mama para pacientes con grado 3 de diferenciación y un tumor de más de 50 mm es, como mínimo, un 69.2% mayor y, como máximo, un 217% mayor que ese mismo riesgo para aquellas pacientes también con grado 3 pero con un tumor de 20mm o menos; todo esto para valores fijos de las variables restantes.
+#### 2) 
+La tasa de mortalidad para mujeres que no recibieron quimioterapia teniendo un tumor de más de 50 mm es, como mínimo, un 3.4% mayor y, a lo sumo, un 158% mayor que esa misma tasa para mujeres que si recibieron quimioteapia y tenían un tumor de 20 mm o menos. 
+Por otro lado, la tasa de mortalidad para mujeres que tenían un tumor de más de 50 mm y recibieron quimioterapia es, al menos, un 114% mayor y, como máximo, 405% mayor que esa misma tasa para mujeres cuyo tumor medía 20 mm o menos y no recibieron quimioterapia.
 
-2) 
-
-3) El riesgo de tener cáncer de mama en mujeres entre 50 y 65 años es, al menos, un 9.2% mayor y, como mucho, casi un 150% mayor que ese mismo riesgo en mujeres de menos de 40 años; para los valores establecidos anteriormente de las demás variables.
+#### 3) 
+La tasa de mortalidad de mujeres entre 50 y 65 años es, al menos, un 9.2% mayor y, como mucho, casi un 150% mayor que esa misma tasa para mujeres de menos de 40 años; para los valores establecidos anteriormente de las demás variables.
 

@@ -698,3 +698,33 @@ Por otro lado, la tasa de mortalidad para mujeres que tienen un tumor de más de
 #### 3) 
 La tasa de mortalidad de mujeres entre 50 y 65 años es, al menos, un 8.6% mayor y, como mucho, un 148% mayor que esa misma tasa para mujeres de menos de 40 años, manteniendo fijas las demás variables.
 
+
+
+```{r, eval=FALSE, results='hide'}
+# Probaremos de hacer un modelo tomando a la edad como una covariable dependiente del tiempo, a ver si eso soluciona el incumplimiento del supuesto de hazards proporcionales
+
+# Modelos con variables dependientes del tiempo
+modelo5 <- coxph(Surv(dtime, death) ~ age + tt(age) + chemo +
+                   grade + size, tt = function(x, t, ...) x*t,
+                 ties = 'breslow', data = datos2)
+
+# Comparación de modelos
+verosim_Modelo <- -2*modelo3$loglik[2]
+verosim_Modelo_tage <- -2*modelo5$loglik[2]
+
+pchisq(verosim_Modelo - verosim_Modelo_tage, df=1, lower.tail = FALSE) # Significativo
+
+# Residuos de Schoenfeld
+
+schoenfeld_res <- residuals(modelo5, type = "schoenfeld")
+schoenfeld_tt_age <- schoenfeld_res[, "tt(age)"]
+schoenfeld_age <- schoenfeld_res[, "age"]
+
+# Crear un gráfico de los residuos de Schoenfeld contra el tiempo
+plot(datos2$dtime[datos2$death == 1], schoenfeld_tt_age, 
+     xlab = "Tiempo",
+     ylab = "Residuos de Schoenfeld para tt(age)",
+     main = "Residuos de Schoenfeld para tt(age) vs. Tiempo")
+abline(h = 0, col = "red")
+```
+

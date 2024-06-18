@@ -71,6 +71,8 @@ datos$grade <- as.factor(datos$grade)
 
 ## Elección del modelo
 
+Para hallar el modelo de Cox más adecuado, se utilizará el método de selección de modelos propuesto por Collet y un nivel de significación de 0.05 en todos los pasos.
+
 ### Selección de variables
 
 ```{r, include=FALSE}
@@ -155,7 +157,6 @@ lrtest(modelo_nulo, modelo_size) #Test significativo
 # En resumen, resultaron significativos: edad, menopausia, receptores de estrógeno, grado de diferenciación y tamaño del tumor.
 ```
 
-Se utilizará el método de selección de modelos propuesto por Collet.
 
 Para tratar las variables *Tamaño* y *Grado* se definen las siguientes 3 variables dummies:
 
@@ -206,9 +207,9 @@ Con los resultados observados en la *Tabla 1* se determina que las variables sig
 
 En segundo lugar, se evaluará si cada una de esas variables sigue siendo significativa en presencia de las demás seleccionadas.
 
-Para cada variable, se compara entonces un modelo aditivo que contenga todas las variables significativas hasta el momento, excepto la variable en cuestión, contra un modelo sí la incluya.
+Para cada variable, se compara entonces un modelo que contenga todas las variables significativas hasta el momento, excepto la variable en cuestión, contra un modelo que sí la incluya.
 
-- Modelo aditivo: 
+- Modelo con todas las variables significativas: 
 
 $$
 h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{age}_i + \beta_2 \cdot \text{meno}_i + \beta_3 \cdot \text{er}_i + \beta_4 \cdot G_i + \beta_5 \cdot S_{1i} + \beta_6 \cdot S_{2i})
@@ -510,12 +511,12 @@ ggplot(data = data, aes(x = time, y = residuals)) +
   geom_point(pch = 21, color = "black") +
   geom_smooth(method = "loess", se = F, color = "steelblue2") +
   facet_wrap(~variable, scales = "free_y")+
-  labs(x = "Tiempo", y = "Residuos", caption = "Gráfico 1: Comprobación gráfica del supuesto de hazards proporcinales") +
+  labs(x = "Tiempo", y = "Residuos", caption = "Figura 1: Comprobación gráfica del supuesto de hazards proporcinales") +
   theme_bw() +
   theme(plot.caption = element_text(hjust = 0.5))
 ```
 
-Los resultados de los test (*Tabla 4*), de manera global, indican que el supuesto no se cumple ya que se rechaza la hipótesis nula. En particular, las variables que no cumplen con la proporcionalidad de los hazards son *Edad* y *Quimioterapia*. Esto puede constatarse también de forma gráfica (*Gráfico 1*) al ver que los residuos de *Quimioterapia* no están divididos en dos grupos (cantidad de categorías que tiene), lo que sí sucede con *Grado* y *Tamaño*. 
+Los resultados de los test (*Tabla 4*), de manera global, indican que el supuesto no se cumple ya que se rechaza la hipótesis nula. En particular, las variables que no cumplen con la proporcionalidad de los hazards son *Edad* y *Quimioterapia*. Esto puede constatarse también de forma gráfica (*Figura 1*) al ver que los residuos de *Quimioterapia* no están divididos en dos grupos (cantidad de categorías que tiene), lo que sí sucede con *Grado* y *Tamaño*. 
 
 De la variable *Edad*, por ser continua, se debería observar un patrón aleatorio, pero se observa que los puntos están menos dispersos al avanzar el tiempo.
 
@@ -605,6 +606,8 @@ Por lo tanto, se decide igualmente utilizar el modelo sin estratificar. De esta 
 
 Por lo que el modelo estimado resulta ser: $$\hat{h_i} (t) = \hat{h_0} (t) \cdot exp(-0.05 \cdot A_{1i} + 0.5 \cdot A_{2i} + 0.77 \cdot A_{3i} + 0.35 \cdot \text{chemo}_i + 0.31 \cdot G_i + 0.38 \cdot S_{1i} + 0.84 \cdot S_{2i})$$
 
+\newpage
+
 ## Interpretación del modelo
 
 ### Coeficientes
@@ -619,23 +622,60 @@ Con solo mirar los coeficientes del modelo se puede concluir:
 
 Otra forma de interpretar el modelo es obteniendo razones de hazards, y sus respectivos intervalos de confianza, para distintos valores de las variables. 
 
+#### 1) Grado y Tamaño: 
+con la interpretación de los coeficientes del modelo se pudo concluir que el tumor más grave es el de grado 3 y tamaño mayor a 50mm, y el menos grave es el de grado 2 y tamaño menor a 20mm. Para cuantificar la diferencia entre ambos tumores se calcula la razón de hazards para un grupo etario y tratamiento de quimioterapia fijos.
 
-#### Grado y Tamaño: 
-Es sabido que un mayor grado de diferenciciación más rápida es la dispersión del cancer, por lo que se calcula la razón de hazard para el grado de diferenciación 3 y comparando, por un lado, el tamaño del tumor menor a 20 mm contra el tamaño entre 20 y 50 mm; por otro, el tamaño del tumor menora 20 mm contra el tamaño mayor a 50 mm.
+```{r, eval=FALSE, results='hide'}
+rh <- exp(0.31+0.839)
 
-$$\circ \; \hat{RH}_{(<20 \; \text{vs} \; 20\text{-}50)} = \frac{\hat{h_0} (t) \cdot exp(-0.05 \cdot A_{1i} + 0.5 \cdot A_{2i} + 0.77 \cdot A_{3i} + 0.35 \cdot \text{chemo}_i + 0.31 \cdot 1 + 0.38 \cdot 1 + 0.84 \cdot 0)}{\hat{h_0} (t) \cdot exp(-0.05 \cdot A_{1i} + 0.5 \cdot A_{2i} + 0.77 \cdot A_{3i} + 0.35 \cdot \text{chemo}_i + 0.31 \cdot 1 + 0.38 \cdot 0 + 0.84 \cdot 0)} \Longrightarrow $$
+vcov(modelo4)
 
-$$ \Longrightarrow \hat{RH}_{(<20 \; \text{vs} \; 20\text{-}50)} = exp(0.38) = 1.46 $$
-$$ \circ \; IC_{RH} = e^{[\hat{\beta}_6 \; \pm \; Z_{1-\frac{\alpha}{2}} \cdot \hat{SE}(\hat{\beta}_6) ]} = (e^{0.149};e^{0.611}) = (1.161; 1.842)$$
-
-
-$$\circ \; \hat{RH}_{(<20 \; \text{vs} \; >50)} = \frac{\hat{h_0} (t) \cdot exp(-0.05 \cdot A_{1i} + 0.5 \cdot A_{2i} + 0.77 \cdot A_{3i} + 0.35 \cdot \text{chemo}_i + 0.31 \cdot 1 + 0.38 \cdot 0 + 0.84 \cdot 1)}{\hat{h_0} (t) \cdot exp(-0.05 \cdot A_{1i} + 0.5 \cdot A_{2i} + 0.77 \cdot A_{3i} + 0.35 \cdot \text{chemo}_i + 0.31 \cdot 1 + 0.38 \cdot 0 + 0.84 \cdot 0)} \Longrightarrow $$
-$$ \Longrightarrow \hat{RH}_{(<20 \; \text{vs} \; >50)} = exp(0.84) = 2.32 $$
-
-$$ \circ \; IC_{RH} = e^{[\hat{\beta}_7 \; \pm \; Z_{1-\frac{\alpha}{2}} \cdot \hat{SE}(\hat{\beta}_7) ]} = (e^{0.526};e^{1.154}) = (1.692; 3.171)$$
-
-Por lo que el riesgo de tener cáncer de mama en pacientes con grado 3 de diferenciación y un tumor entre 20 y 50 mm es como minimo un 16.1% mayor y como máximo un 84.2% mayor que ese mismo riesgo para aquellas pacientes con grado 3 de diferenciación y un tumor de menos de 20 mm. Mientras que el riesgo de tener cáncer de mama para pacientes con grado 3 de diferenciación y un tumor de más de 50 mm es, como mínimo, un 69.2% mayor y, como máximo, un 217% mayor que ese mismo riesgo para aquellas pacientes también con grado 3 pero con un tumor de menos de 20mm.
+IC_inf <- rh-1.96*sqrt(0.119^2+0.159^2+2*(-0.001))
+IC_sup <- rh+1.96*sqrt(0.119^2+0.159^2+2*(-0.001))
+```
 
 
-#### Tamaño y Quimioterapia: 
-Muchas veces, la quimioterapia no da resultados; esto no necesariamente se da porque se la haya aplicado tarde, si no porque, quizás, el tamaño del tumor a tratar era demasiado pequeño
+#### 2) Tamaño y Quimioterapia: 
+muchas veces, la quimioterapia no da resultados; esto no necesariamente se da porque se la haya aplicado tarde, si no porque, quizás, el tamaño del tumor a tratar era demasiado pequeño.
+
+```{r, eval=FALSE, results='hide'}
+# Primer RH
+
+
+# Segunda RH
+rh <- exp(0.35+0.839)
+
+vcov(modelo4)
+
+IC_inf <- rh-1.96*sqrt(0.158^2+0.159^2+2*(-0.001))
+IC_sup <- rh+1.96*sqrt(0.158^2+0.159^2+2*(-0.001))
+```
+
+#### 3) Edad: 
+resulta de interés comparar las funciones hazards de mujeres que fueron expuestas a la quimioterapia, poseen grado 3 de diferenciación y su tumor es de más de 50mm, en especifico para dos grupos etarios: las menores de 40 años y aquellas entre 50 y 65 años.
+
+
+$$
+\begin{array} {c|c|c}
+\hat{RH} & \text{Estimación puntual} & \text{Intervalo} \\
+\hline
+G=3; \; T \leq 20 \; \text{vs} \; G=2, \; T \geq 50 & 3.155 & (2.776; 3.534) \\
+\\
+Q=\text{no}, \; T \; >50 \; \text{vs} \; Q=\text{si}, \; T \leq 20 & 3.284 & (1.034; 2.578) \\
+\\
+Q=\text{no}, \; T \leq 20; \; \text{vs} \; Q=\text{si}, \; T \; >50 & 3.735 & (2.140;5.048) \\
+\\
+Q=\text{si}; \; G=3; \; T>50; \; E=<40 \; \text{vs} \; \geq50 \;\text{-}<65 & 1.65 & (1.092;2.488) \\
+\end{array}
+$$
+
+#### 1) 
+La tasa de mortalidad de pacientes con grado de diferenciación tumoral 3 y un tumor de más de 50mm de diámetro es, como mínimo un 177% y como máximo un 253% mayor que esa misma tasa para pacientes con grado 2 de diferenciación y un tumor de 20mm de diámetro o menos, para un grupo etario y *Quimioterapia* fijos.
+
+#### 2) 
+La tasa de mortalidad para mujeres que no recibieron quimioterapia teniendo un tumor de más de 50 mm es, como mínimo, un 3.4% mayor y, a lo sumo, un 158% mayor que esa misma tasa para mujeres que si recibieron quimioteapia y tenían un tumor de 20 mm o menos. 
+Por otro lado, la tasa de mortalidad para mujeres que tenían un tumor de más de 50 mm y recibieron quimioterapia es, al menos, un 114% mayor y, como máximo, 405% mayor que esa misma tasa para mujeres cuyo tumor medía 20 mm o menos y no recibieron quimioterapia.
+
+#### 3) 
+La tasa de mortalidad de mujeres entre 50 y 65 años es, al menos, un 9.2% mayor y, como mucho, casi un 150% mayor que esa misma tasa para mujeres de menos de 40 años; para los valores establecidos anteriormente de las demás variables.
+

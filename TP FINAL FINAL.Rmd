@@ -623,7 +623,7 @@ Con solo mirar los coeficientes del modelo se puede concluir:
 Otra forma de interpretar el modelo es obteniendo razones de hazards, y sus respectivos intervalos de confianza, para distintos valores de las variables. 
 
 #### 1) Grado y Tamaño: 
-con la interpretación de los coeficientes del modelo se pudo concluir que el tumor más grave es el de grado 3 y tamaño mayor a 50mm, y el menos grave es el de grado 2 y tamaño menor a 20mm. Para cuantificar la diferencia entre ambos tumores se calcula la razón de hazards para un grupo etario y tratamiento de quimioterapia fijos.
+Con la interpretación de los coeficientes del modelo se pudo concluir que el tumor más grave es el de grado 3 y tamaño mayor a 50mm, y el menos grave es el de grado 2 y tamaño menor o igual a 20mm. Para cuantificar la diferencia entre ambos tumores se calcula la razón de hazards para un grupo etario y tratamiento de quimioterapia fijos.
 
 ```{r, eval=FALSE, results='hide'}
 rh <- exp(0.31+0.839)
@@ -637,7 +637,7 @@ IC_sup <- exp(centro+1.96*sqrt(0.119^2+0.159^2+2*(-0.001)))
 
 
 #### 2) Tamaño y Quimioterapia: 
-la quimioterapia podría no ser tan beneficiosa en mujeres con tumores chicos, o no ser eficiente en mujeres con un cáncer muy avanzado. Por eso resulta de interés estudiar analizar la relación entre *Tamaño* y *Quimioterapia*.
+La quimioterapia podría no ser tan beneficiosa en mujeres con tumores chicos, o no ser eficiente en mujeres con un cáncer muy avanzado. Por eso resulta de interés analizar la relación entre *Tamaño* y *Quimioterapia*.
 
 
 ```{r, eval=FALSE, results='hide'}
@@ -646,7 +646,9 @@ rh <- exp(0.839)/exp(0.35)
 
 vcov(modelo4)
 
-centro <- 0.839/0.35
+centro <- 0.839-0.35
+IC_inf <- exp(centro - 1.96*sqrt(0.158^2 + 0.159^2 - 2*(-0.001) ))
+IC_sup <- exp(centro + 1.96*sqrt(0.158^2 + 0.159^2 - 2*(-0.001) ))
 
 # Los limites como se calculan?
 
@@ -662,7 +664,7 @@ IC_sup <- exp(centro+1.96*sqrt(0.158^2+0.159^2+2*(-0.001)))
 ```
 
 #### 3) Edad: 
-puede interesar, por ejemplo, comparar las funciones hazard de mujeres para dos grupos etarios: las menores de 40 años y aquellas entre 50 y 65 años.
+Puede interesar, por ejemplo, comparar las funciones hazard de mujeres para dos grupos etarios: las menores de 40 años y aquellas entre 50 y 65 años.
 
 ```{r, eval=FALSE, results='hide'}
 rh <- exp(0.495)
@@ -704,6 +706,8 @@ La tasa de mortalidad de mujeres entre 50 y 65 años es, al menos, un 8.6% mayor
 # Probaremos de hacer un modelo tomando a la edad como una covariable dependiente del tiempo, a ver si eso soluciona el incumplimiento del supuesto de hazards proporcionales
 
 # Modelos con variables dependientes del tiempo
+
+# Edad continua*t
 modelo5 <- coxph(Surv(dtime, death) ~ age + tt(age) + chemo +
                    grade + size, tt = function(x, t, ...) x*t,
                  ties = 'breslow', data = datos2)
@@ -726,5 +730,27 @@ plot(datos2$dtime[datos2$death == 1], schoenfeld_tt_age,
      ylab = "Residuos de Schoenfeld para tt(age)",
      main = "Residuos de Schoenfeld para tt(age) vs. Tiempo")
 abline(h = 0, col = "red")
+
+# Comprobación del supuesto en un modelo con edad categórica*t
+modelo6 <- coxph(Surv(dtime, death) ~ age_d1 + age_d2 + age_d3 + tt(age_d1) + tt(age_d2) + tt(age_d3) + chemo + grade + size, tt = function(x, t, ...) x*t,
+                 ties = 'breslow', data = datos2)
+
+verosim_Modelo <- -2*modelo4$loglik[2]
+verosim_Modelo_tage <- -2*modelo6$loglik[2]
+
+pchisq(verosim_Modelo - verosim_Modelo_tage, df=3, lower.tail = FALSE) # Significativo
+
+# Comprobación del supuesto en un modelo con edad categórica*log(t)
+modelo7 <- coxph(Surv(dtime, death) ~ age_d1 + age_d2 + age_d3 + tt(age_d1) + tt(age_d2) + tt(age_d3) + chemo + grade + size, tt = function(x, t, ...) x*log(t),
+                 ties = 'breslow', data = datos2)
+
+verosim_Modelo <- -2*modelo4$loglik[2]
+verosim_Modelo_tage <- -2*modelo7$loglik[2]
+
+pchisq(verosim_Modelo - verosim_Modelo_tage, df=3, lower.tail = FALSE) # Significativo
+```
+
+```{r}
+summary(modelo6)
 ```
 

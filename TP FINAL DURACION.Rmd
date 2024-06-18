@@ -1,0 +1,719 @@
+---
+title: |
+  \vspace{1cm}
+  \begin{tabular}{c}
+  {\normalsize\textbf{UNIVERSIDAD NACIONAL DE ROSARIO}}\\
+  {\Large Facultad de Ciencias Económicas y Estadística}\\
+  \\
+  \includegraphics[width=5cm]{LogoUNR.png}\\
+  \vspace{1cm}
+   \\
+  {\huge\textbf{Análisis de datos de duración}} \\
+  {\huge\textbf{en pacientes con cáncer de mama}}\\
+  \\
+  {\Large Rotterdam tumor bank - 1978-1985}\\
+  \end{tabular}
+  \vspace{5cm}
+author: |
+  *Alumnas:* Agustina Mac Kay y Rocio Canteros
+date: "Año 2024"
+output: pdf_document
+extra_dependencies: ["babel"]
+header-includes:
+  - \usepackage{amsmath}
+  - \usepackage[spanish,provide=*]{babel}
+  - \addto\captionsspanish{\renewcommand{\tablename}{\textit{Tabla}}}
+  - \addto\captionsspanish{\renewcommand{\thetable}{\textit{\arabic{table}}}}
+  - \usepackage{array}
+  - \usepackage{caption}
+  - \usepackage{hyperref}
+---
+
+```{r setup, echo=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE, echo = FALSE)
+```
+
+## Introducción
+
+El cáncer de mama es un tipo de cáncer primario, que se origina en la mama y puede propagarse a otros tejidos u órganos del cuerpo. Es el tipo de cáncer más frecuente y la causa más común de muerte por cáncer en mujeres a nivel mundial.[^1]
+
+[^1]: Fuente: [\textcolor{blue}{\underline{Organización Panamericana de la Salud}}](https://www.paho.org/es/temas/cancer-mama)
+
+En este estudio se trabajará con información acerca de 583 mujeres que fueron sometidas, entre 1978 y 1985, a una cirugía primaria para extirpar el tumor.
+
+Los datos fueron obtenidos de la base *rotterdam* del paquete *survival* de R. La misma cuenta con el tiempo desde la cirugía hasta la muerte o pérdida de seguimiento de las pacientes, junto a otras covariables basales que se detallan a continuación:
+
+-   **Age**: edad al momento de la cirugía (en años).
+-   **Meno**: estado menopáusico, donde 0 = premenopáusico y 1 = postmenopáusico.
+-   **Hormon**: variable indicadora de haber recibido un tratamiento hormonal.
+-   **Chemo**: variable indicadora de haber recibido quimioterapia.
+-   **Pgr**: receptores de progesterona (en fmol/l).
+-   **Er**: receptores de estrógeno (en fmol/l).
+-   **Grade**: grado de diferenciación del tumor, con valores 2 o 3.
+-   **Size**: tamaño del tumor, con niveles: menos de 20mm, entre 20 y 50mm, 50mm.
+
+De la totalidad de mujeres en estudio, se cuenta con el tiempo exacto hasta la muerte de 377 de ellas y 206 censuras.
+
+```{r echo=FALSE}
+library(tidyverse)
+library(gridExtra)
+library(survival)  # Para el ajuste de modelos de Cox 
+library(survminer) # Crear gráficos con la función ggsurvplot()
+library(lmtest) # Para calcular la significancia de los Beta 
+library(corrplot) #Para el gráfico de correlaciones
+
+datos <- rotterdam %>%
+  filter(year <= 1985) %>%
+  select(-c(nodes, rtime, recur))
+
+datos$grade <- as.factor(datos$grade)
+```
+
+## Elección del modelo
+
+Para hallar el modelo de Cox más adecuado, se utilizará el método de selección de modelos propuesto por Collet y un nivel de significación de 0.05 en todos los pasos.
+
+### Selección de variables
+
+```{r, include=FALSE}
+#Modelo sin covariables
+modelo_nulo <- coxph(Surv(dtime, death) ~ 1, ties = "breslow", data = datos)
+loglik_nulo <- modelo_nulo$loglik
+
+#Modelos con una sola variable:
+# 1) Edad:
+modelo_edad <- coxph(Surv(dtime, death) ~ age, ties = "breslow",
+                     data = datos)
+
+loglik_edad <- modelo_edad$loglik[2]
+
+#Comparación del modelo con el modelo nulo
+
+lrtest(modelo_nulo, modelo_edad) # Test significativo
+
+
+# 2) Menopausia
+modelo_meno <- coxph(Surv(dtime, death) ~ meno, ties = "breslow",
+                     data = datos)
+
+loglik_meno <- modelo_meno$loglik[2]
+
+#Comparo con el modelo nulo:
+lrtest(modelo_nulo, modelo_meno) # Test significativo
+
+
+# 3) Terapia hormonal:
+modelo_hormon <- coxph(Surv(dtime, death) ~ hormon, ties = "breslow",
+                       data = datos)
+
+#Comparo con el modelo nulo:
+lrtest(modelo_nulo, modelo_hormon) # Test no significativo
+
+
+# 4) Quimioterapia:
+modelo_chemo <- coxph(Surv(dtime, death) ~ chemo, ties = "breslow", data = datos)
+
+
+#Comparo con el modelo nulo:
+lrtest(modelo_nulo, modelo_chemo) # Test no significativo
+
+
+# 5) Receptores de progesterona:
+modelo_pgr <- coxph(Surv(dtime, death) ~ pgr, ties = "breslow",
+                    data = datos)
+
+
+# Comparo con el modelo nulo:
+lrtest(modelo_nulo, modelo_pgr)  # Test no significativo
+
+
+# 6) Receptores de estrógeno:
+modelo_er <- coxph(Surv(dtime, death) ~ er, ties = "breslow",
+                   data = datos)
+
+
+#Comparo con el modelo nulo:
+lrtest(modelo_nulo, modelo_er)  # Test significativo
+
+
+
+# 7) Grado de diferenciación:
+modelo_grade <- coxph(Surv(dtime, death) ~ grade, ties = "breslow",
+                      data = datos)
+
+
+# Compraro con el modelo nulo:
+lrtest(modelo_nulo, modelo_grade)  #Test significativo
+
+
+# 8) Tamaño del tumor:
+modelo_size <- coxph(Surv(dtime, death) ~ size, ties = "breslow",
+                     data = datos)
+
+
+#Comparación con el modelo nulo:
+lrtest(modelo_nulo, modelo_size) #Test significativo
+
+# En resumen, resultaron significativos: edad, menopausia, receptores de estrógeno, grado de diferenciación y tamaño del tumor.
+```
+
+
+Para tratar las variables *Tamaño* y *Grado* se definen las siguientes 3 variables dummies:
+
+$$
+\begin{array}{ccc||cc}
+\text{size} & S_1 & S_2 & \text{grade} & G\\
+\hline
+< 20 & 0 & 0 & 2 & 0\\
+20\text{-}50 & 1 & 0 & 3 & 1\\
+> 50 & 0 & 1 & & 
+\end{array}
+$$
+
+En primer lugar, se comparan modelos que incluyen una sola variable a la vez contra un modelo sin cova- riables.
+
+Las hipótesis en contraste son:
+
+\begin{align*}
+\begin{cases}
+H_0) \quad &\beta_j = 0 \\
+&\qquad \qquad \quad \text{con} \; j = \overline{1,8} \\
+H_1) \quad &\beta_j \neq 0
+\end{cases}
+\end{align*}
+
+Con los resultados observados en la *Tabla 1* se determina que las variables significativas en esta etapa de la selección son: *Edad*, *Menopausia*, *Receptores de estrógeno*, *Grado de diferenciación* y *Tamaño del tumor*. 
+
+\newpage
+
+\begin{table}[h!]
+    \centering
+    \[
+    \begin{array}{c|c|c}
+    \text{Variable} & p\,\text{-value} & \text{Decisión} \\
+    \hline
+    \text{Edad} & \sim 0 & \text{Rechazo H}_0 \\
+    \text{Menopausia} & \sim 0 & \text{Rechazo H}_0 \\
+    \text{Tratamiento hormonal} & 0.8381 & \text{No rechazo H}_0 \\
+    \text{Quimioterapia} & 0.4217 & \text{No rechazo H}_0 \\
+    \text{Receptores de progesterona} & 0.1316 & \text{No rechazo H}_0 \\
+    \text{Receptores de estrógeno} & 0.0017 & \text{Rechazo H}_0 \\
+    \text{Grado de diferenciación} & 0.0004 & \text{Rechazo H}_0 \\
+    \text{Tamaño} & \sim 0 & \text{Rechazo H}_0
+    \end{array}
+    \]
+    \caption{Test de hipótesis para la comparación de modelos univariados contra el modelo nulo}
+\end{table}
+
+En segundo lugar, se evaluará si cada una de esas variables sigue siendo significativa en presencia de las demás seleccionadas.
+
+Para cada variable, se compara entonces un modelo que contenga todas las variables significativas hasta el momento, excepto la variable en cuestión, contra un modelo que sí la incluya.
+
+- Modelo con todas las variables significativas: 
+
+$$
+h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{age}_i + \beta_2 \cdot \text{meno}_i + \beta_3 \cdot \text{er}_i + \beta_4 \cdot G_i + \beta_5 \cdot S_{1i} + \beta_6 \cdot S_{2i})
+$$
+
+- Modelos de comparación:
+
+1) Sin la variable *Edad*: 
+
+$$h_i(t) = h_0(t) \cdot \exp(\beta_2 \cdot \text{meno}_i + \beta_3 \cdot \text{er}_i + \beta_4 \cdot G_i + \beta_5 \cdot S_{1i} + \beta_6 \cdot S_{2i})$$
+
+2) Sin la variable *Menopausia*: 
+
+$$h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{age}_i + \beta_3 \cdot \text{er}_i + \beta_4 \cdot G_i + \beta_5 \cdot S_{1i} + \beta_6 \cdot S_{2i})$$
+
+3) Sin la variable *Receptores de estrógeno*: 
+
+$$h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{age}_i + \beta_2 \cdot \text{meno}_i + \beta_4 \cdot G_i + \beta_5 \cdot S_{1i} + \beta_6 \cdot S_{2i})$$
+
+4) Sin la variable *Grado de diferenciación del tumor*: 
+
+$$h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{age}_i + \beta_2 \cdot \text{meno}_i + \beta_3 \cdot \text{er}_i + \beta_5 \cdot S_{1i} + \beta_6 \cdot S_{2i})$$
+
+5) Sin la variable *Tamaño del tumor*: 
+
+$$h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{age}_i + \beta_2 \cdot \text{meno}_i + \beta_3 \cdot \text{er}_i + \beta_4 \cdot G_i)$$
+
+\newpage
+
+\underline{Hipótesis}: las hipótesis del test se dividen en 2 casos:
+
+- Variables con 1 solo coeficiente asociado en el modelo:
+
+\begin{align*}
+\begin{cases}
+H_0) \quad &\beta_j = 0 \\
+&\qquad \qquad \quad \text{con} \; j = \overline{1,4} \\
+H_1) \quad &\beta_j \neq 0
+\end{cases}
+\end{align*}
+
+
+- Variable *Tamaño del tumor*, que cuenta con 2 coeficientes asociados en el modelo:
+
+\begin{align*}
+\begin{cases}
+H_0) &\, \beta_5 = \beta_{6} = 0 \\
+H_1) &\, \text{Al menos un} \quad \beta_j \neq 0, \quad \text{con} \; j = \overline{5,6}
+\end{cases}
+\end{align*}
+
+```{r, include=FALSE}
+#Se define el modelo con las variables importantes:
+modelo1 <- coxph(Surv(dtime, death) ~ age + meno + er + grade + size,
+                 ties = "breslow", data = datos)
+
+# Para cada variable importante, comparamos el modelo 1 contra un modelo que no contenga la variable de interés y así evaluamos su significancia
+
+# 1) Variable Edad
+modelo_sin_age <- coxph(Surv(dtime, death) ~ meno + er + grade + size,
+                        ties = "breslow", data = datos)
+
+lrtest(modelo_sin_age, modelo1) # Test significativo
+
+# 2) Variable Menopausia
+modelo_sin_meno <- coxph(Surv(dtime, death) ~ age + er + grade + size,
+                         ties = "breslow", data = datos)
+
+lrtest(modelo_sin_meno, modelo1) # Test no significativo
+
+# 3) Variable Receptores de estrógeno
+modelo_sin_er <- coxph(Surv(dtime, death) ~ age + meno + grade + size,
+                       ties = "breslow", data = datos)
+
+lrtest(modelo_sin_er, modelo1) # Test no significativo
+
+# 4) Variable Grade
+modelo_sin_grade <- coxph(Surv(dtime, death) ~ age + meno + er + size,
+                          ties = "breslow", data = datos)
+
+lrtest(modelo_sin_grade, modelo1) # Test significativo
+
+# 5) Variable Size
+modelo_sin_size <- coxph(Surv(dtime, death) ~ age + meno + er + grade,
+                         ties = "breslow", data = datos)
+
+lrtest(modelo_sin_size, modelo1) # Test significativo
+
+# En resumen, las variables que resultaron significativas en un modelo que contiene la edad, menopausia, receptores de estrógeno, grado y tamaño del tumor son: edad, grado y tamaño del tumor.
+```
+
+\begin{table}[h!]
+  \centering
+  \[
+  \begin {array} {c|c|c}
+  \text{Variable} & p\,\text{-value} & \text{Decisión} \\
+  \hline
+  \text{Edad} & 0.0229 & \text{Rechazo H}_0 \\
+  \text{Menopausia} & 0.5586 & \text{No rechazo H}_0 \\
+  \text{Receptores de estrógeno} & 0.1276 & \text{No rechazo H}_0 \\
+  \text{Grado de diferenciación} & 0.0056 & \text{Rechazo H}_0 \\
+  \text{Tamaño} & \sim 0 & \text{Rechazo H}_0 \\
+  \end {array}
+  \]
+  \caption{Test de hipótesis para probar la significancia de las variables en presencia de las demás}
+\end{table}
+
+
+Teniendo en cuenta los resultados de las comparaciones en la *Tabla 2*, el modelo que se obtiene es: $$h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{age}_i + \beta_2 \cdot G_i + \beta_3 \cdot S_{1i} + \beta_4 \cdot S_{2i})$$
+
+Sin embargo, este no es el modelo final. El siguiente paso es evaluar si ahora las variables que se descartaron en el primer paso son o no significativas.
+
+```{r, include=FALSE}
+# Modelo con las variables significativas hasta el momento
+modelo2 <- coxph(Surv(dtime, death) ~ age + grade + size, ties = "breslow",
+                 data = datos)
+
+# Para evaluar la significancia de las covariables que descartamos en la primer etapa de la selección,comparamos el modelo 2 contra un modelo que contenga sus mismas variables más cada una de las covariables.
+
+# 1) Variable "Tratamiento hormonal"
+modelo2_con_hormon <- coxph(Surv(dtime, death) ~ age + grade + size +
+                              hormon, ties = "breslow", data = datos)
+ 
+ lrtest(modelo2, modelo2_con_hormon) # Test no significativo
+ 
+# 2) Variable Quimioterapia
+modelo2_con_chemo <- coxph(Surv(dtime, death) ~ age + grade + size + chemo,
+                           ties = "breslow", data = datos)
+ 
+lrtest(modelo2, modelo2_con_chemo) # Test significativo
+
+# 3) Variable Receptores de progesterona:
+modelo2_con_pgr <- coxph(Surv(dtime, death) ~ age + grade + size + pgr, 
+                         ties = "breslow", data = datos)
+ 
+lrtest(modelo2, modelo2_con_pgr) #No es significativa
+
+# En resumen, el efecto de la Quimioterapia es significativo en un modelo que incluye también a la edad y el grado y tamaño del tumor. Tratamiento hormonal y Receptores de Progesterona siguen sin ser significativos.
+
+# Llamamos "modelo 3" a nuestro nuevo modelo
+modelo3 <- coxph(Surv(dtime, death) ~ age + chemo + grade + size,
+                 ties = "breslow", data = datos)
+```
+
+\begin{table}[h!]
+  \centering
+  \[
+  \begin{array} {c|c|c}
+  \text{Variable} & p\,\text{-value} & \text{Decisión} \\
+  \hline
+  \text{Tratamiento hormonal} & 0.5420 & \text{No rechazo H}_0 \\
+  \text{Quimioterapia} & 0.0209 & \text{Rechazo H}_0 \\
+  \text{Receptores de progesterona} & 0.3811 & \text{No rechazo H}_0 \\
+  \end{array}
+  \]
+  \caption{Significancia de las variables descartadas en el paso 1 en presencia de las seleccionadas en el paso 2}
+\end{table}
+
+
+Por lo observado en la *Tabla 3*, se debe agragar *Quimioterapia* al modelo, quedando de la siguiente manera: $$h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{age}_i + \beta_2 \cdot \text{chemo}_i + \beta_3 \cdot G_i + \beta_4 \cdot S_{1i} + \beta_5 \cdot S_{2i})$$
+
+Por último, se prueban las interacciones dobles entre las variables pero ninguna resulta significativa, por lo que el modelo actual no se altera.
+
+```{r, eval=FALSE}
+# === Prueba de significancia de las interacciones dobles ===
+
+#Interaccion Edad-Quimioterapia
+modelo_int1 <- coxph(Surv(dtime, death) ~ age + chemo +  grade + size + age*chemo,
+                     ties = "breslow", data = datos)
+
+lrtest(modelo3, modelo_int1) #Test no significativo
+
+
+#Interacción Edad-Grado
+modelo_int2 <- coxph(Surv(dtime, death) ~ age + chemo +  grade + size + age*grade,
+                     ties = "breslow", data = datos)
+
+lrtest(modelo3, modelo_int2) #Test no significativo
+
+
+#Interacción Edad-Tamaño:
+modelo_int3 <- coxph(Surv(dtime, death) ~ age + chemo +  grade + size + age*size,
+                     ties = "breslow", data = datos)
+
+lrtest(modelo3, modelo_int3) #Test no significativo
+
+
+#Interacción Quimioterapia-Grado:
+modelo_int4 <- coxph(Surv(dtime, death) ~ age + chemo +  grade + size + chemo*grade,
+                     ties = "breslow", data = datos)
+
+lrtest(modelo3, modelo_int4) #Test no significativo
+
+
+#Interacción Quimioterapia-Tamaño:
+modelo_int5 <- coxph(Surv(dtime, death) ~ age + chemo +  grade + size + chemo*size,
+                     ties = "breslow", data = datos)
+
+lrtest(modelo3, modelo_int5) #Test no significativo
+
+
+#Interacción Grado-Tamaño:
+modelo_int6 <- coxph(Surv(dtime, death) ~ age + chemo +  grade + size + grade*size,
+                     ties = "breslow", data = datos)
+
+lrtest(modelo3, modelo_int6) #Test no significativo
+
+```
+
+### Linealidad
+
+Cuando se tienen variables de tipo continua se debe analizar si incluirlas en el modelo de forma lineal o no lineal.
+
+En este caso, la única variable continua que se tiene es *Edad*, por lo que se plantean las siguientes hipótesis:
+
+\begin{align*}
+\begin{cases}
+H_0)\quad &\text{El efecto de Edad es lineal} \\
+H_1)\quad &\text{El efecto de Edad NO es lineal}
+\end{cases}
+\end{align*}
+
+
+```{r, include=FALSE}
+# Variable Edad
+
+datos2 <- datos %>% 
+  mutate(
+    age_d1 = ifelse(age >= 40 & age < 50, 1, 0),
+    age_d2 = ifelse(age >= 50 & age < 65, 1, 0),
+    age_d3 = ifelse(age >= 65, 1, 0)
+  ) %>% 
+  mutate(
+    age_factor = case_when(
+      age < 40 ~ 1,
+      age >= 40 & age < 50 ~ 2,
+      age >= 50 & age < 65 ~ 3,
+      age >= 65 ~ 4
+    )
+  )
+
+modelo3_edad_dummie <- coxph(Surv(dtime, death) ~ age_d1 +
+                            age_d2 + age_d3+ chemo + grade
+                            + size, ties = "breslow",
+                            data = datos2)
+
+modelo3_edad_factor <- coxph(Surv(dtime, death) ~ age_factor + chemo + grade + size, ties = "breslow", data = datos2)
+
+lrtest(modelo3_edad_factor, modelo3_edad_dummie) # Test no significativo, variable LINEAL
+```
+
+Como la probabilidad asociada al test es mayor a 0.05, es correcto incluir la edad al modelo de forma lineal.
+
+Con este resultado, se concluye que el modelo seleccionado es el presentado con anterioridad:
+$$
+h_i(t) = h_0(t) \cdot \exp(\beta_1 \cdot \text{age}_i + \beta_2 \cdot \text{chemo}_i + \beta_3 \cdot G_i + \beta_4 \cdot S_{1i} + \beta_5 \cdot S_{2i})
+$$
+
+### Comprobación de supuestos
+
+El modelo propuesto solo es válido si se cumple el supuesto de hazards proporcionales. Para comprobarlo, se utilizan los residuos de Schoenfeld obtenidos para cada variable y el test de Grambsch y Therneau.
+
+```{r}
+#H_0)Los hazards son proporcionales
+test <- cox.zph(modelo3)
+```
+
+\begin{table}[h!]
+  \centering
+  \[
+  \begin{array} {c|c}
+  \text{Variable} & p\,\text{-value} \\
+  \hline
+  \text{Edad} & \sim 0 \\
+  \text{Quimioterapia} & 0.0438\\
+  \text{Grado} & 0.2969 \\
+  \text{Tamaño} & 0.1809 \\
+  \hline
+  \text{Global} & 0.0004 \\
+  \end{array}
+  \]
+  \caption{Test de hipótesis para la comprobación del supuesto de hazards proporcioneales}
+\end{table}
+
+```{r, fig.height=3.5}
+#Convertimos la información de "test" en datos que puedan usarse en ggplot()
+time <- test$time
+residuals <- as.data.frame(test$y)
+variables <- c("Edad", "Quimioterapia", "Grado", "Tamaño")
+
+data <- data.frame(
+  time = rep(time, ncol(residuals)),
+  residuals =as.vector(as.matrix(residuals)),
+  variable = rep(variables, each = length(time))
+)
+
+#Gráfico de residuos
+ggplot(data = data, aes(x = time, y = residuals)) +
+  geom_point(pch = 21, color = "black") +
+  geom_smooth(method = "loess", se = F, color = "steelblue2") +
+  facet_wrap(~variable, scales = "free_y")+
+  labs(x = "Tiempo", y = "Residuos", caption = "Figura 1: Comprobación gráfica del supuesto de hazards proporcinales") +
+  theme_bw() +
+  theme(plot.caption = element_text(hjust = 0.5))
+```
+
+Los resultados de los test (*Tabla 4*), de manera global, indican que el supuesto no se cumple ya que se rechaza la hipótesis nula. En particular, las variables que no cumplen con la proporcionalidad de los hazards son *Edad* y *Quimioterapia*. Esto puede constatarse también de forma gráfica (*Figura 1*) al ver que los residuos de *Quimioterapia* no están divididos en dos grupos (cantidad de categorías que tiene), lo que sí sucede con *Grado* y *Tamaño*. 
+
+De la variable *Edad*, por ser continua, se debería observar un patrón aleatorio, pero se observa que los puntos están menos dispersos al avanzar el tiempo.
+
+Para poder incluir las 2 variables que son significativas pero no cumplen el supuesto de proporcionalidad, se decide lo siguiente:
+
+- Categorizar la variable *Edad* en 4 categorías: Menores de 40 años, Entre 40 y 50 años, Entre 50 y 65 años y Mayores de 65 años.
+
+- Estratificar el modelo por la variable *Quimioterapia*.
+
+```{r, results='hide'}
+# Planteamos un modelo estratificando por quimioterapia y otro sin estratificar. En ambos se incorpora a Age a través de dummies.
+
+# -- Modelo estratificado --
+
+modelo_estrat <- coxph(Surv(dtime, death) ~
+                      age_d1 + age_d2 + age_d3 + strata(chemo)+
+                      grade + size, ties = "breslow",
+                      data = datos2)
+
+cox.zph(modelo_estrat) # GLOBAL:0.087
+
+# == Modelo sin estratificar ==
+
+# Edad dummies
+modelo4 <- coxph(Surv(dtime, death) ~
+                      age_d1 + age_d2 + age_d3 + chemo +
+                      grade + size, ties = "breslow",
+                      data = datos2)
+
+test2 <- cox.zph(modelo4)
+cox.zph(modelo4) # GLOBAL:0.046
+
+```
+
+\begin{table}[h!]
+  \centering
+  \begin{minipage}{0.48\textwidth}
+    \centering
+    \[
+    \qquad \qquad \qquad \qquad
+    \begin{array}{c|c}
+    \text{Variable} & p\,\text{-value} \\
+    \hline
+    \text{A}_1 & 0.540 \\
+    \text{A}_2 & 0.500 \\
+    \text{A}_3 & 0.063 \\
+    \text{Grado} & 0.201 \\
+    \text{Tamaño} & 0.123 \\
+    & \\
+    \hline
+    \text{Global} & 0.087 \\
+    \end{array}
+    \]
+  \end{minipage}
+  \begin{minipage}{0.48\textwidth}
+    \centering
+    \[
+    \begin{array}{c|c}
+    \text{Variable} & p\,\text{-value} \\
+    \hline
+    \text{A}_1 & 0.208 \\
+    \text{A}_2 & 0.592 \\
+    \text{A}_3 & 0.014 \\
+    \text{Grado} & 0.259 \\
+    \text{Tamaño} & 0.117 \\
+    \text{Quimioterapia} & 0.065 \\
+    \hline
+    \text{Global} & 0.046 \\
+    \end{array}
+    \qquad \qquad \qquad \qquad
+    \]
+  \end{minipage}
+  \caption{Test de comprobación del supuesto de hazards proporcionales estratificando por Quimioterapia (tabla derecha) y sin estratificar (tabla izquierda)}
+\end{table}
+
+En la *Tabla 5* se puede observar que el supuesto se cumple solo para el modelo estratificado. Sin embargo, la probabilidad asociada al test del modelo sin estratificar es muy cercano a 0.05, y dicho modelo brinda la posibilidad de estimar un parámetro para *Quimioterapia*, que es una variable importante para el problema.
+
+Por lo tanto, se decide igualmente utilizar el modelo sin estratificar. De esta forma, el modelo final contiene las siguientes variables:
+
+- **Edad** (categorizada).
+
+- **Quimioterapia**.
+
+- **Grado de diferenciación tumoral**.
+
+- **Tamaño del tumor**.
+
+Por lo que el modelo estimado resulta ser: $$\hat{h_i} (t) = \hat{h_0} (t) \cdot exp(-0.05 \cdot A_{1i} + 0.5 \cdot A_{2i} + 0.77 \cdot A_{3i} + 0.35 \cdot \text{chemo}_i + 0.31 \cdot G_i + 0.38 \cdot S_{1i} + 0.84 \cdot S_{2i})$$
+
+\newpage
+
+## Interpretación del modelo
+
+### Coeficientes
+
+Con solo mirar los coeficientes del modelo se puede concluir:
+
+- El perfil de paciente femenino con mejor prónostico al realizar la cirugía primaria de extracción del tumor mamario es: mujer entre 40 y 50 años de edad, que no recibió quimioterapia y que posee un tumor de grado 2 con menos de 20cm de diámetro.
+
+- El perfil de paciente femenino con el peor pronóstico es: mujer mayor a 65 años de edad, que recibió quimioterapia y posee un tumor de grado 3 con más de 50cm de diámetro.
+
+### Razones de hazards
+
+Otra forma de interpretar el modelo es obteniendo razones de hazards, y sus respectivos intervalos de confianza, para distintos valores de las variables. 
+
+#### 1) Grado y Tamaño: 
+<<<<<<< HEAD
+con la interpretación de los coeficientes del modelo se pudo concluir que el tumor más grave es el de grado 3 y tamaño mayor a 50mm, y el menos grave es el de grado 2 y tamaño menor a 20mm. Para cuantificar la diferencia entre ambos tumores se calcula la razón de hazards para un grupo etario y tratamiento de quimioterapia fijos.
+
+```{r, eval=FALSE, results='hide'}
+rh <- exp(0.31+0.839)
+
+vcov(modelo4)
+
+IC_inf <- rh-1.96*sqrt(0.119^2+0.159^2+2*(-0.001))
+IC_sup <- rh+1.96*sqrt(0.119^2+0.159^2+2*(-0.001))
+```
+
+
+#### 2) Tamaño y Quimioterapia: 
+muchas veces, la quimioterapia no da resultados; esto no necesariamente se da porque se la haya aplicado tarde, si no porque, quizás, el tamaño del tumor a tratar era demasiado pequeño.
+
+```{r, eval=FALSE, results='hide'}
+# Primer RH
+=======
+Es sabido que a mayor grado de diferenciciación más rápida es la dispersión del cáncer, por lo que se calcula la razón de hazard para el grado de diferenciación 3 y comparando, por un lado, el tamaño del tumor menor o igual a 20 mm contra el tamaño entre 20 y 50 mm; por otro, el tamaño del tumor menor o igual a 20 mm contra el tamaño mayor a 50 mm.
+
+#### 2) Tamaño y Quimioterapia: 
+Muchas veces, la quimioterapia no da resultados; esto no necesariamente se da porque se la haya aplicado tarde, si no porque, quizás, el tamaño del tumor a tratar era demasiado pequeño.
+
+#### 3) Edad: 
+Resulta de interés comparar las funciones hazards de mujeres que fueron expuestas a la quimioterapia, poseen grado 3 de diferenciación y su tumor es de más de 50mm, en especifico para dos grupos etarios: las menores de 40 años y aquellas entre 50 y 65 años.
+
+
+$$ \begin{array} {c|cc}
+\hat{RH} & \text{Estimación} & \text{Intervalo} \\
+\hline
+\\
+G=3; \; T = \leq 20 \; \text{vs} \; 20\text{-}50 & 1.46 & (1.161; 1.842) \\
+\\
+G=3; \; T = \leq 20 \; \text{vs} \; >50 & 2.32 & (1.692; 3.171) \\
+\\
+Q=Si, \; T= \leq 20; \; \text{vs} \; Q=No, \; T= \; >50 & 1.63 & (1.034; 2.578) \\
+\\
+Q=No, \; T= \leq 20; \; \text{vs} \; Q=Si, \; T= \; >50 & 3.29 & (2.140;5.048) \\
+\\
+Q=Si; \; G=3; \; T=>50; \; E=<40 \; \text{vs} \; \geq50 \;\text{-}<65 & 1.65 & (1.092;2.488) \\
+\end{array}$$
+
+#### 1) 
+La tasa de mortalidad de pacientes con grado 3 de diferenciación y un tumor entre 20 y 50 mm es, como minimo, un 16.1% mayor y, como máximo, un 84.2% mayor que esa misma tasa de pacientes con grado 3 de diferenciación y un tumor de 20 mm o menos. Mientras que la tasa de mortalidad de pacientes con grado 3 de diferenciación y un tumor de más de 50 mm es, como mínimo, un 69.2% mayor y, como máximo, un 217% mayor que esa misma tasa de pacientes también con grado 3 pero con un tumor de 20mm o menos; para valores fijos de las variables restantes.
+
+#### 2) 
+La tasa de mortalidad para mujeres que no recibieron quimioterapia teniendo un tumor de más de 50 mm es, como mínimo, un 3.4% mayor y, a lo sumo, un 158% mayor que esa misma tasa para mujeres que si recibieron quimioteapia y tenían un tumor de 20 mm o menos. 
+Por otro lado, la tasa de mortalidad para mujeres que tenían un tumor de más de 50 mm y recibieron quimioterapia es, al menos, un 114% mayor y, como máximo, 405% mayor que esa misma tasa para mujeres cuyo tumor medía 20 mm o menos y no recibieron quimioterapia.
+>>>>>>> 6bee6252cb7ee6e366bee45effd3694213caa196
+
+#### 3) 
+La tasa de mortalidad de mujeres entre 50 y 65 años es, al menos, un 9.2% mayor y, como mucho, casi un 150% mayor que esa misma tasa para mujeres de menos de 40 años; para los valores establecidos anteriormente de las demás variables.
+
+<<<<<<< HEAD
+# Segunda RH
+rh <- exp(0.35+0.839)
+
+vcov(modelo4)
+
+IC_inf <- rh-1.96*sqrt(0.158^2+0.159^2+2*(-0.001))
+IC_sup <- rh+1.96*sqrt(0.158^2+0.159^2+2*(-0.001))
+```
+
+#### 3) Edad: 
+resulta de interés comparar las funciones hazards de mujeres que fueron expuestas a la quimioterapia, poseen grado 3 de diferenciación y su tumor es de más de 50mm, en especifico para dos grupos etarios: las menores de 40 años y aquellas entre 50 y 65 años.
+
+
+$$
+\begin{array} {c|c|c}
+\hat{RH} & \text{Estimación puntual} & \text{Intervalo} \\
+\hline
+G=3; \; T \leq 20 \; \text{vs} \; G=2, \; T \geq 50 & 3.155 & (2.776; 3.534) \\
+\\
+Q=\text{no}, \; T \; >50 \; \text{vs} \; Q=\text{si}, \; T \leq 20 & 3.284 & (1.034; 2.578) \\
+\\
+Q=\text{no}, \; T \leq 20; \; \text{vs} \; Q=\text{si}, \; T \; >50 & 3.735 & (2.140;5.048) \\
+\\
+Q=\text{si}; \; G=3; \; T>50; \; E=<40 \; \text{vs} \; \geq50 \;\text{-}<65 & 1.65 & (1.092;2.488) \\
+\end{array}
+$$
+
+#### 1) 
+La tasa de mortalidad de pacientes con grado de diferenciación tumoral 3 y un tumor de más de 50mm de diámetro es, como mínimo un 177% y como máximo un 253% mayor que esa misma tasa para pacientes con grado 2 de diferenciación y un tumor de 20mm de diámetro o menos, para un grupo etario y *Quimioterapia* fijos.
+
+#### 2) 
+La tasa de mortalidad para mujeres que no recibieron quimioterapia teniendo un tumor de más de 50 mm es, como mínimo, un 3.4% mayor y, a lo sumo, un 158% mayor que esa misma tasa para mujeres que si recibieron quimioteapia y tenían un tumor de 20 mm o menos. 
+Por otro lado, la tasa de mortalidad para mujeres que tenían un tumor de más de 50 mm y recibieron quimioterapia es, al menos, un 114% mayor y, como máximo, 405% mayor que esa misma tasa para mujeres cuyo tumor medía 20 mm o menos y no recibieron quimioterapia.
+
+#### 3) 
+La tasa de mortalidad de mujeres entre 50 y 65 años es, al menos, un 9.2% mayor y, como mucho, casi un 150% mayor que esa misma tasa para mujeres de menos de 40 años; para los valores establecidos anteriormente de las demás variables.
+
+=======
+>>>>>>> 6bee6252cb7ee6e366bee45effd3694213caa196

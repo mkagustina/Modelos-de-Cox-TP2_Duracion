@@ -630,52 +630,71 @@ rh <- exp(0.31+0.839)
 
 vcov(modelo4)
 
-IC_inf <- rh-1.96*sqrt(0.119^2+0.159^2+2*(-0.001))
-IC_sup <- rh+1.96*sqrt(0.119^2+0.159^2+2*(-0.001))
+centro <- 0.31+0.839
+IC_inf <- exp(centro-1.96*sqrt(0.119^2+0.159^2+2*(-0.001)))
+IC_sup <- exp(centro+1.96*sqrt(0.119^2+0.159^2+2*(-0.001)))
 ```
 
 
 #### 2) Tamaño y Quimioterapia: 
-muchas veces, la quimioterapia no da resultados; esto no necesariamente se da porque se la haya aplicado tarde, si no porque, quizás, el tamaño del tumor a tratar era demasiado pequeño.
+la quimioterapia podría no ser tan beneficiosa en mujeres con tumores chicos, o no ser eficiente en mujeres con un cáncer muy avanzado. Por eso resulta de interés estudiar analizar la relación entre *Tamaño* y *Quimioterapia*.
+
 
 ```{r, eval=FALSE, results='hide'}
 # Primer RH
+rh <- exp(0.839)/exp(0.35)
 
+vcov(modelo4)
+
+centro <- 0.839/0.35
+
+# Los limites como se calculan?
 
 # Segunda RH
 rh <- exp(0.35+0.839)
 
 vcov(modelo4)
 
-IC_inf <- rh-1.96*sqrt(0.158^2+0.159^2+2*(-0.001))
-IC_sup <- rh+1.96*sqrt(0.158^2+0.159^2+2*(-0.001))
+centro <- 0.35+0.839
+IC_inf <- exp(centro-1.96*sqrt(0.158^2+0.159^2+2*(-0.001)))
+IC_sup <- exp(centro+1.96*sqrt(0.158^2+0.159^2+2*(-0.001)))
+
 ```
 
 #### 3) Edad: 
-resulta de interés comparar las funciones hazards de mujeres que fueron expuestas a la quimioterapia, poseen grado 3 de diferenciación y su tumor es de más de 50mm, en especifico para dos grupos etarios: las menores de 40 años y aquellas entre 50 y 65 años.
+puede interesar, por ejemplo, comparar las funciones hazard de mujeres para dos grupos etarios: las menores de 40 años y aquellas entre 50 y 65 años.
 
+```{r, eval=FALSE, results='hide'}
+rh <- exp(0.495)
+
+centro <- 0.495
+
+IC_inf <- exp(centro-1.96*0.21)
+IC_sup <- exp(centro+1.96*0.21)
+```
 
 $$
 \begin{array} {c|c|c}
-\hat{RH} & \text{Estimación puntual} & \text{Intervalo} \\
+RH & \text{Estimación puntual} & \text{Intervalo} \\
 \hline
-G=3; \; T \leq 20 \; \text{vs} \; G=2, \; T \geq 50 & 3.155 & (2.776; 3.534) \\
-\\
-Q=\text{no}, \; T \; >50 \; \text{vs} \; Q=\text{si}, \; T \leq 20 & 3.284 & (1.034; 2.578) \\
-\\
-Q=\text{no}, \; T \leq 20; \; \text{vs} \; Q=\text{si}, \; T \; >50 & 3.735 & (2.140;5.048) \\
-\\
-Q=\text{si}; \; G=3; \; T>50; \; E=<40 \; \text{vs} \; \geq50 \;\text{-}<65 & 1.65 & (1.092;2.488) \\
+G=3; \; T \leq 20 \; \text{vs} \; G=2, \; T \geq 50 & 3.155 & (2.159; 4.610) \\
+\rule{0pt}{2.5ex} \\
+Q=\text{no}, \; T \; >50 \; \text{vs} \; Q=\text{si}, \; T \leq 20 & 1.63 & (1.034; 2.578) \\
+\rule{0pt}{2.5ex} \\
+Q=\text{si}, \; T \; >50 \; \text{vs} \; Q=\text{no}, \; T \leq 20 & 3.284 & (2.135;5.051) \\
+\rule{0pt}{2.5ex} \\
+\text{Mujeres entre 50 y 65 años}\; \text{vs} \;\text{menores de 40} & 1.640 & (1.086;2.476) \\
 \end{array}
 $$
 
 #### 1) 
-La tasa de mortalidad de pacientes con grado de diferenciación tumoral 3 y un tumor de más de 50mm de diámetro es, como mínimo un 177% y como máximo un 253% mayor que esa misma tasa para pacientes con grado 2 de diferenciación y un tumor de 20mm de diámetro o menos, para un grupo etario y *Quimioterapia* fijos.
+La tasa de mortalidad de pacientes con grado de diferenciación tumoral 3 y un tumor de más de 50mm de diámetro es, como mínimo un 116% y como máximo un 361% mayor que esa misma tasa para pacientes con grado 2 de diferenciación y un tumor de 20mm de diámetro o menos, para un grupo etario y *Quimioterapia* fijos.
 
 #### 2) 
-La tasa de mortalidad para mujeres que no recibieron quimioterapia teniendo un tumor de más de 50 mm es, como mínimo, un 3.4% mayor y, a lo sumo, un 158% mayor que esa misma tasa para mujeres que si recibieron quimioteapia y tenían un tumor de 20 mm o menos. 
-Por otro lado, la tasa de mortalidad para mujeres que tenían un tumor de más de 50 mm y recibieron quimioterapia es, al menos, un 114% mayor y, como máximo, 405% mayor que esa misma tasa para mujeres cuyo tumor medía 20 mm o menos y no recibieron quimioterapia.
+La tasa de mortalidad para mujeres que no recibieron quimioterapia teniendo un tumor de más de 50 mm es, como mínimo, un 3% mayor y, a lo sumo, un 158% mayor que esa misma tasa para mujeres que sí recibieron quimioterapia pero tienen un tumor de 20 mm o menos; para mujeres del mismo rango etario y grado de tumor.
+
+Por otro lado, la tasa de mortalidad para mujeres que tienen un tumor de más de 50 mm y recibieron quimioterapia es, al menos, un 113% mayor y, como máximo, 405% mayor que esa misma tasa para mujeres cuyo tumor mide 20 mm o menos y no recibieron quimioterapia; para mujeres del mismo rango etario y grado de tumor.
 
 #### 3) 
-La tasa de mortalidad de mujeres entre 50 y 65 años es, al menos, un 9.2% mayor y, como mucho, casi un 150% mayor que esa misma tasa para mujeres de menos de 40 años; para los valores establecidos anteriormente de las demás variables.
+La tasa de mortalidad de mujeres entre 50 y 65 años es, al menos, un 8.6% mayor y, como mucho, un 148% mayor que esa misma tasa para mujeres de menos de 40 años, manteniendo fijas las demás variables.
 

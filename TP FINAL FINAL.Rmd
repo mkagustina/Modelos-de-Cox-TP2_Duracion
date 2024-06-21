@@ -616,12 +616,15 @@ Sin embargo, se considera que la *Edad* de las pacientes es una variable sumamen
   fonttitle=\bfseries, title=Advertencia, #1}
 ```
 
+\vspace{2mm}
 \begin{warning}
-Como la \textit{Edad} categorizada no cumple con el supuesto HP, sus razones de hazard serán una suerte de promedio a través del tiempo
+Como el supuesto no se cumple para la variable \textit{Edad} categorizada, sus coeficientes asociados son una suerte de efecto promedio a través del tiempo.
 \end{warning}
+\vspace{2mm}
 
-Por lo tanto, se decide igualmente utilizar el modelo sin estratificar. De esta forma, el modelo final contiene las siguientes variables:
+De esta forma, el modelo final contiene las siguientes variables:
 
+\vspace{-2mm}
 - **Edad** (categorizada).
 
 - **Quimioterapia**.
@@ -631,8 +634,6 @@ Por lo tanto, se decide igualmente utilizar el modelo sin estratificar. De esta 
 - **Tamaño del tumor**.
 
 Por lo que el modelo estimado resulta ser: $$\hat{h_i} (t) = \hat{h_0} (t) \cdot exp(-0.05 \cdot A_{1i} + 0.5 \cdot A_{2i} + 0.77 \cdot A_{3i} + 0.35 \cdot \text{chemo}_i + 0.31 \cdot G_i + 0.38 \cdot S_{1i} + 0.84 \cdot S_{2i})$$
-
-\newpage
 
 ## Interpretación del modelo
 
@@ -676,8 +677,6 @@ centro <- 0.839-0.35
 IC_inf <- exp(centro - 1.96*sqrt(0.158^2 + 0.159^2 - 2*(-0.001) ))
 IC_sup <- exp(centro + 1.96*sqrt(0.158^2 + 0.159^2 - 2*(-0.001) ))
 
-# Los limites como se calculan?
-
 # Segunda RH
 rh <- exp(0.35+0.839)
 
@@ -686,7 +685,6 @@ vcov(modelo4)
 centro <- 0.35+0.839
 IC_inf <- exp(centro-1.96*sqrt(0.158^2+0.159^2+2*(-0.001)))
 IC_sup <- exp(centro+1.96*sqrt(0.158^2+0.159^2+2*(-0.001)))
-
 ```
 
 #### 3) Edad: 

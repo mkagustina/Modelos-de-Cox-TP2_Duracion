@@ -27,6 +27,7 @@ header-includes:
   - \usepackage{array}
   - \usepackage{caption}
   - \usepackage{hyperref}
+  - \usepackage{tcolorbox}
 ---
 
 ```{r setup, echo=FALSE}
@@ -592,7 +593,32 @@ cox.zph(modelo4) # GLOBAL:0.046
   \caption{Test de comprobación del supuesto de hazards proporcionales estratificando por Quimioterapia (tabla derecha) y sin estratificar (tabla izquierda)}
 \end{table}
 
+```{r, eval=FALSE, results='hide'}
+# Como otro método para probar el cumplimiento del supuesto de hazards proporcionales, haremos un modelo con la edad categorizada dependiete del tiempo.
+
+modelo5 <- coxph(Surv(dtime, death) ~ age_d1 + age_d2 + age_d3 + tt(age_d1) + tt(age_d2) + tt(age_d3) + chemo + grade + size, tt = function(x, t, ...) x*t,
+                 ties = 'breslow', data = datos2)
+
+verosim_Modelo <- -2*modelo4$loglik[2]
+verosim_Modelo_tage <- -2*modelo5$loglik[2]
+
+pchisq(verosim_Modelo - verosim_Modelo_tage, df=3, lower.tail = FALSE) # 0.03, no es significativo pero casi.
+```
+
 En la *Tabla 5* se puede observar que el supuesto se cumple solo para el modelo estratificado. Sin embargo, la probabilidad asociada al test del modelo sin estratificar es muy cercano a 0.05, y dicho modelo brinda la posibilidad de estimar un parámetro para *Quimioterapia*, que es una variable importante para el problema.
+
+Como otra forma de analizar el supuesto de hazards proporcionales, se utiliza un modelo sin estratificar y con la edad categorizada dependiente del tiempo. Al comparar dicho modelo con un modelo cuyas covariables no dependen del tiempo, se obtiene un p-$value$ de $0.03$, lo cual indica nuevamente que el supuesto de hazards proporcionales no se cumple en un modelo con la edad categorizada.
+
+Sin embargo, se considera que la *Edad* de las pacientes es una variable sumamente importante a la hora de analizar la experiencia de supervivencia al cáncer de mama. Por ello, no se la descartará a pesar de no cumplir el supuesto.
+
+```{=latex}
+\newtcolorbox{warning}[1][]{colback=red!5!white, colframe=red!70!white,
+  fonttitle=\bfseries, title=Advertencia, #1}
+```
+
+\begin{warning}
+Como la \textit{Edad} categorizada no cumple con el supuesto HP, sus razones de hazard serán una suerte de promedio a través del tiempo
+\end{warning}
 
 Por lo tanto, se decide igualmente utilizar el modelo sin estratificar. De esta forma, el modelo final contiene las siguientes variables:
 
@@ -699,58 +725,3 @@ Por otro lado, la tasa de mortalidad para mujeres que tienen un tumor de más de
 
 #### 3) 
 La tasa de mortalidad de mujeres entre 50 y 65 años es, al menos, un 8.6% mayor y, como mucho, un 148% mayor que esa misma tasa para mujeres de menos de 40 años, manteniendo fijas las demás variables.
-
-
-
-```{r, eval=FALSE, results='hide'}
-# Probaremos de hacer un modelo tomando a la edad como una covariable dependiente del tiempo, a ver si eso soluciona el incumplimiento del supuesto de hazards proporcionales
-
-# Modelos con variables dependientes del tiempo
-
-# Edad continua*t
-modelo5 <- coxph(Surv(dtime, death) ~ age + tt(age) + chemo +
-                   grade + size, tt = function(x, t, ...) x*t,
-                 ties = 'breslow', data = datos2)
-
-# Comparación de modelos
-verosim_Modelo <- -2*modelo3$loglik[2]
-verosim_Modelo_tage <- -2*modelo5$loglik[2]
-
-pchisq(verosim_Modelo - verosim_Modelo_tage, df=1, lower.tail = FALSE) # Significativo
-
-# Residuos de Schoenfeld
-
-schoenfeld_res <- residuals(modelo5, type = "schoenfeld")
-schoenfeld_tt_age <- schoenfeld_res[, "tt(age)"]
-schoenfeld_age <- schoenfeld_res[, "age"]
-
-# Crear un gráfico de los residuos de Schoenfeld contra el tiempo
-plot(datos2$dtime[datos2$death == 1], schoenfeld_tt_age, 
-     xlab = "Tiempo",
-     ylab = "Residuos de Schoenfeld para tt(age)",
-     main = "Residuos de Schoenfeld para tt(age) vs. Tiempo")
-abline(h = 0, col = "red")
-
-# Comprobación del supuesto en un modelo con edad categórica*t
-modelo6 <- coxph(Surv(dtime, death) ~ age_d1 + age_d2 + age_d3 + tt(age_d1) + tt(age_d2) + tt(age_d3) + chemo + grade + size, tt = function(x, t, ...) x*t,
-                 ties = 'breslow', data = datos2)
-
-verosim_Modelo <- -2*modelo4$loglik[2]
-verosim_Modelo_tage <- -2*modelo6$loglik[2]
-
-pchisq(verosim_Modelo - verosim_Modelo_tage, df=3, lower.tail = FALSE) # Significativo
-
-# Comprobación del supuesto en un modelo con edad categórica*log(t)
-modelo7 <- coxph(Surv(dtime, death) ~ age_d1 + age_d2 + age_d3 + tt(age_d1) + tt(age_d2) + tt(age_d3) + chemo + grade + size, tt = function(x, t, ...) x*log(t),
-                 ties = 'breslow', data = datos2)
-
-verosim_Modelo <- -2*modelo4$loglik[2]
-verosim_Modelo_tage <- -2*modelo7$loglik[2]
-
-pchisq(verosim_Modelo - verosim_Modelo_tage, df=3, lower.tail = FALSE) # Significativo
-```
-
-```{r}
-summary(modelo6)
-```
-

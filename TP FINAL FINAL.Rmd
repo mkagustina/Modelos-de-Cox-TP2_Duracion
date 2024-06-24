@@ -258,7 +258,7 @@ H_1) \quad &\beta_j \neq 0
 \begin{align*}
 \begin{cases}
 H_0) &\, \beta_5 = \beta_{6} = 0 \\
-H_1) &\, \text{Al menos un} \quad \beta_j \neq 0, \quad \text{con} \; j = \overline{5,6}
+H_1) &\, \text{Al menos un} \quad \beta_j \neq 0, \quad \text{con} \; j = 5,6
 \end{cases}
 \end{align*}
 
